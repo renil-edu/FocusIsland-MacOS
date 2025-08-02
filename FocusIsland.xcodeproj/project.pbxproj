@@ -1,0 +1,546 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXContainerItemProxy section */
+		D9FF1F182E3EC1CB006E343A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D9FF1F012E3EC1CA006E343A /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D9FF1F082E3EC1CA006E343A;
+			remoteInfo = FocusIsland;
+		};
+		D9FF1F222E3EC1CB006E343A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D9FF1F012E3EC1CA006E343A /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D9FF1F082E3EC1CA006E343A;
+			remoteInfo = FocusIsland;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		D9FF1F092E3EC1CA006E343A /* FocusIsland.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FocusIsland.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		D9FF1F172E3EC1CB006E343A /* FocusIslandTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FocusIslandTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		D9FF1F212E3EC1CB006E343A /* FocusIslandUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FocusIslandUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		D9FF1F0B2E3EC1CA006E343A /* FocusIsland */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = FocusIsland;
+			sourceTree = "<group>";
+		};
+		D9FF1F1A2E3EC1CB006E343A /* FocusIslandTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = FocusIslandTests;
+			sourceTree = "<group>";
+		};
+		D9FF1F242E3EC1CB006E343A /* FocusIslandUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = FocusIslandUITests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		D9FF1F062E3EC1CA006E343A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D9FF1F142E3EC1CB006E343A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D9FF1F1E2E3EC1CB006E343A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		D9FF1F002E3EC1CA006E343A = {
+			isa = PBXGroup;
+			children = (
+				D9FF1F0B2E3EC1CA006E343A /* FocusIsland */,
+				D9FF1F1A2E3EC1CB006E343A /* FocusIslandTests */,
+				D9FF1F242E3EC1CB006E343A /* FocusIslandUITests */,
+				D9FF1F0A2E3EC1CA006E343A /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		D9FF1F0A2E3EC1CA006E343A /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				D9FF1F092E3EC1CA006E343A /* FocusIsland.app */,
+				D9FF1F172E3EC1CB006E343A /* FocusIslandTests.xctest */,
+				D9FF1F212E3EC1CB006E343A /* FocusIslandUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		D9FF1F082E3EC1CA006E343A /* FocusIsland */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D9FF1F2B2E3EC1CB006E343A /* Build configuration list for PBXNativeTarget "FocusIsland" */;
+			buildPhases = (
+				D9FF1F052E3EC1CA006E343A /* Sources */,
+				D9FF1F062E3EC1CA006E343A /* Frameworks */,
+				D9FF1F072E3EC1CA006E343A /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				D9FF1F0B2E3EC1CA006E343A /* FocusIsland */,
+			);
+			name = FocusIsland;
+			packageProductDependencies = (
+			);
+			productName = FocusIsland;
+			productReference = D9FF1F092E3EC1CA006E343A /* FocusIsland.app */;
+			productType = "com.apple.product-type.application";
+		};
+		D9FF1F162E3EC1CB006E343A /* FocusIslandTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D9FF1F2E2E3EC1CB006E343A /* Build configuration list for PBXNativeTarget "FocusIslandTests" */;
+			buildPhases = (
+				D9FF1F132E3EC1CB006E343A /* Sources */,
+				D9FF1F142E3EC1CB006E343A /* Frameworks */,
+				D9FF1F152E3EC1CB006E343A /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				D9FF1F192E3EC1CB006E343A /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				D9FF1F1A2E3EC1CB006E343A /* FocusIslandTests */,
+			);
+			name = FocusIslandTests;
+			packageProductDependencies = (
+			);
+			productName = FocusIslandTests;
+			productReference = D9FF1F172E3EC1CB006E343A /* FocusIslandTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		D9FF1F202E3EC1CB006E343A /* FocusIslandUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D9FF1F312E3EC1CB006E343A /* Build configuration list for PBXNativeTarget "FocusIslandUITests" */;
+			buildPhases = (
+				D9FF1F1D2E3EC1CB006E343A /* Sources */,
+				D9FF1F1E2E3EC1CB006E343A /* Frameworks */,
+				D9FF1F1F2E3EC1CB006E343A /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				D9FF1F232E3EC1CB006E343A /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				D9FF1F242E3EC1CB006E343A /* FocusIslandUITests */,
+			);
+			name = FocusIslandUITests;
+			packageProductDependencies = (
+			);
+			productName = FocusIslandUITests;
+			productReference = D9FF1F212E3EC1CB006E343A /* FocusIslandUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		D9FF1F012E3EC1CA006E343A /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1640;
+				LastUpgradeCheck = 1640;
+				TargetAttributes = {
+					D9FF1F082E3EC1CA006E343A = {
+						CreatedOnToolsVersion = 16.4;
+					};
+					D9FF1F162E3EC1CB006E343A = {
+						CreatedOnToolsVersion = 16.4;
+						TestTargetID = D9FF1F082E3EC1CA006E343A;
+					};
+					D9FF1F202E3EC1CB006E343A = {
+						CreatedOnToolsVersion = 16.4;
+						TestTargetID = D9FF1F082E3EC1CA006E343A;
+					};
+				};
+			};
+			buildConfigurationList = D9FF1F042E3EC1CA006E343A /* Build configuration list for PBXProject "FocusIsland" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = D9FF1F002E3EC1CA006E343A;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = D9FF1F0A2E3EC1CA006E343A /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				D9FF1F082E3EC1CA006E343A /* FocusIsland */,
+				D9FF1F162E3EC1CB006E343A /* FocusIslandTests */,
+				D9FF1F202E3EC1CB006E343A /* FocusIslandUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		D9FF1F072E3EC1CA006E343A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D9FF1F152E3EC1CB006E343A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D9FF1F1F2E3EC1CB006E343A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		D9FF1F052E3EC1CA006E343A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D9FF1F132E3EC1CB006E343A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D9FF1F1D2E3EC1CB006E343A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		D9FF1F192E3EC1CB006E343A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D9FF1F082E3EC1CA006E343A /* FocusIsland */;
+			targetProxy = D9FF1F182E3EC1CB006E343A /* PBXContainerItemProxy */;
+		};
+		D9FF1F232E3EC1CB006E343A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D9FF1F082E3EC1CA006E343A /* FocusIsland */;
+			targetProxy = D9FF1F222E3EC1CB006E343A /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		D9FF1F292E3EC1CB006E343A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.5;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		D9FF1F2A2E3EC1CB006E343A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.5;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		D9FF1F2C2E3EC1CB006E343A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = FocusIsland/FocusIsland.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.renilgupta.FocusIsland;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		D9FF1F2D2E3EC1CB006E343A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = FocusIsland/FocusIsland.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.renilgupta.FocusIsland;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		D9FF1F2F2E3EC1CB006E343A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.renilgupta.FocusIslandTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/FocusIsland.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/FocusIsland";
+			};
+			name = Debug;
+		};
+		D9FF1F302E3EC1CB006E343A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.renilgupta.FocusIslandTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/FocusIsland.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/FocusIsland";
+			};
+			name = Release;
+		};
+		D9FF1F322E3EC1CB006E343A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.renilgupta.FocusIslandUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_TARGET_NAME = FocusIsland;
+			};
+			name = Debug;
+		};
+		D9FF1F332E3EC1CB006E343A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.renilgupta.FocusIslandUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_TARGET_NAME = FocusIsland;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		D9FF1F042E3EC1CA006E343A /* Build configuration list for PBXProject "FocusIsland" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D9FF1F292E3EC1CB006E343A /* Debug */,
+				D9FF1F2A2E3EC1CB006E343A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D9FF1F2B2E3EC1CB006E343A /* Build configuration list for PBXNativeTarget "FocusIsland" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D9FF1F2C2E3EC1CB006E343A /* Debug */,
+				D9FF1F2D2E3EC1CB006E343A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D9FF1F2E2E3EC1CB006E343A /* Build configuration list for PBXNativeTarget "FocusIslandTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D9FF1F2F2E3EC1CB006E343A /* Debug */,
+				D9FF1F302E3EC1CB006E343A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D9FF1F312E3EC1CB006E343A /* Build configuration list for PBXNativeTarget "FocusIslandUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D9FF1F322E3EC1CB006E343A /* Debug */,
+				D9FF1F332E3EC1CB006E343A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = D9FF1F012E3EC1CA006E343A /* Project object */;
+}
