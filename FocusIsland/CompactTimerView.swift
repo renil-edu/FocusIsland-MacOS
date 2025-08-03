@@ -9,32 +9,26 @@
 import SwiftUI
 
 struct CompactTimerView: View {
-    // Replace these with your real timer logic
-    var timerDisplay: String = "19:42"
-    var progress: Double = 0.37  // 0.0 (just started) to 1.0 (finished)
+    @ObservedObject var timerModel: TimerModel
 
     var body: some View {
         HStack(spacing: 10) {
             ZStack {
-                // Smaller background ring
                 Circle()
                     .stroke(Color.gray.opacity(0.5), lineWidth: 4)
                     .frame(width: 19, height: 19)
-                // Foreground: animated orange progress (smaller)
                 Circle()
-                    .trim(from: 0, to: progress)
+                    .trim(from: 0, to: timerModel.progress)
                     .stroke(Color.orange, style: StrokeStyle(lineWidth: 4, lineCap: .round))
                     .rotationEffect(.degrees(-90))
                     .frame(width: 19, height: 19)
-                // Center: smaller timer symbol
                 Image(systemName: "timer")
                     .resizable()
                     .scaledToFit()
                     .frame(width: 10, height: 10)
                     .foregroundColor(.orange)
             }
-
-            Text(timerDisplay)
+            Text(timerModel.timeDisplay)
                 .font(.system(size: 14, weight: .medium).monospacedDigit())
                 .foregroundColor(.orange)
         }

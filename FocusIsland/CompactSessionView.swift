@@ -9,7 +9,7 @@
 import SwiftUI
 
 struct CompactSessionView: View {
-    var sessionTitle: String = "Homework 1"
+    var sessionTitle: String = "Homework 1 Just Making the Title Really Long"
     var body: some View {
         HStack(spacing: 9) {
             Image(systemName: "checkmark.seal.fill")

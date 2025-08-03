@@ -20,24 +20,18 @@ struct FocusIslandApp: App {
 }
 
 class AppDelegate: NSObject, NSApplicationDelegate {
-    // Supply all 3 views to DynamicNotch
+    let timerModel = TimerModel(sessionDuration: 20 * 60)
     var notch: DynamicNotch<ExpandedNotchView, CompactSessionView, CompactTimerView>?
-    
-    
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        timerModel.start()
         notch = DynamicNotch(
             hoverBehavior: .all,
             style: .notch,
-            expanded: { ExpandedNotchView() },
+            expanded: { ExpandedNotchView(timerModel: self.timerModel) },         // << use self.timerModel
             compactLeading: { CompactSessionView() },
-            compactTrailing: { CompactTimerView() }
+            compactTrailing: { CompactTimerView(timerModel: self.timerModel) }    // << use self.timerModel
         )
-        // Delay compact mode to ensure window is fully ready
-        Task {
-            try? await Task.sleep(nanoseconds: 350_000_000)   // 350ms
-            await notch?.compact()
-        }
+        Task { await notch?.compact() }
     }
-
 }
