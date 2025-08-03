@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		D9FF1F432E3EE755006E343A /* DynamicNotchKit in Frameworks */ = {isa = PBXBuildFile; productRef = D9FF1F422E3EE755006E343A /* DynamicNotchKit */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		D9FF1F182E3EC1CB006E343A /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -45,6 +49,11 @@
 			path = FocusIslandUITests;
 			sourceTree = "<group>";
 		};
+		D9FF1F3A2E3ED6E6006E343A /* Misc */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Misc;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -52,6 +61,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D9FF1F432E3EE755006E343A /* DynamicNotchKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -75,6 +85,7 @@
 		D9FF1F002E3EC1CA006E343A = {
 			isa = PBXGroup;
 			children = (
+				D9FF1F3A2E3ED6E6006E343A /* Misc */,
 				D9FF1F0B2E3EC1CA006E343A /* FocusIsland */,
 				D9FF1F1A2E3EC1CB006E343A /* FocusIslandTests */,
 				D9FF1F242E3EC1CB006E343A /* FocusIslandUITests */,
@@ -109,9 +120,11 @@
 			);
 			fileSystemSynchronizedGroups = (
 				D9FF1F0B2E3EC1CA006E343A /* FocusIsland */,
+				D9FF1F3A2E3ED6E6006E343A /* Misc */,
 			);
 			name = FocusIsland;
 			packageProductDependencies = (
+				D9FF1F422E3EE755006E343A /* DynamicNotchKit */,
 			);
 			productName = FocusIsland;
 			productReference = D9FF1F092E3EC1CA006E343A /* FocusIsland.app */;
@@ -195,6 +208,9 @@
 			);
 			mainGroup = D9FF1F002E3EC1CA006E343A;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				D9FF1F412E3EE755006E343A /* XCRemoteSwiftPackageReference "DynamicNotchKit" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = D9FF1F0A2E3EC1CA006E343A /* Products */;
 			projectDirPath = "";
@@ -541,6 +557,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		D9FF1F412E3EE755006E343A /* XCRemoteSwiftPackageReference "DynamicNotchKit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/MrKai77/DynamicNotchKit";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		D9FF1F422E3EE755006E343A /* DynamicNotchKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D9FF1F412E3EE755006E343A /* XCRemoteSwiftPackageReference "DynamicNotchKit" */;
+			productName = DynamicNotchKit;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = D9FF1F012E3EC1CA006E343A /* Project object */;
 }
