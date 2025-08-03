@@ -7,61 +7,68 @@
 
 
 import Foundation
-import Combine
 
 class TimerModel: ObservableObject {
     @Published var secondsRemaining: Int
     @Published var isRunning: Bool = false
-    
-    // Total duration in seconds for this session; never changes
-    let totalDuration: Int
-    
+    private(set) var totalDuration: Int
+
     private var timer: Timer?
-    
+
     var progress: Double {
-        if totalDuration == 0 { return 1.0 }
-        return 1.0 - Double(secondsRemaining) / Double(totalDuration)
+        totalDuration == 0 ? 1.0 : 1.0 - Double(secondsRemaining) / Double(totalDuration)
     }
-    
+
     var timeDisplay: String {
         String(format: "%d:%02d", secondsRemaining / 60, secondsRemaining % 60)
     }
-    
+
+    /// Closure called when the timer completes (hits zero)
+    var onCompletion: (() -> Void)?
+
     init(sessionDuration: Int) {
         self.totalDuration = sessionDuration
         self.secondsRemaining = sessionDuration
     }
-    
+
     func start() {
-        guard !isRunning else { return }
+        guard !isRunning, secondsRemaining > 0 else { return }
         isRunning = true
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
             self?.tick()
         }
     }
-    
+
     func pause() {
         isRunning = false
         timer?.invalidate()
         timer = nil
     }
-    
-    func reset() {
+
+    /// Reset both the timer and its totalDuration to a new session length if provided
+    func reset(to seconds: Int? = nil) {
         pause()
-        secondsRemaining = totalDuration
+        if let s = seconds {
+            totalDuration = s
+            secondsRemaining = s
+        } else {
+            secondsRemaining = totalDuration
+        }
     }
-    
+
     private func tick() {
         guard secondsRemaining > 0 else {
             pause()
+            onCompletion?()
             return
         }
         secondsRemaining -= 1
         if secondsRemaining == 0 {
             pause()
+            onCompletion?()
         }
     }
-    
+
     deinit {
         pause()
     }

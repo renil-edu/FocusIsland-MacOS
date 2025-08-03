@@ -9,13 +9,14 @@
 import SwiftUI
 
 struct CompactSessionView: View {
-    var sessionTitle: String = "Homework 1 Just Making the Title Really Long"
+    @ObservedObject var state: FocusIslandState
+
     var body: some View {
         HStack(spacing: 9) {
             Image(systemName: "checkmark.seal.fill")
                 .foregroundColor(.blue)
                 .font(.system(size: 15, weight: .bold))
-            Text(sessionTitle)
+            Text(state.currentSession?.title ?? "--")
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundColor(.white)
                 .lineLimit(1)

@@ -9,12 +9,13 @@
 import SwiftUI
 
 struct ExpandedNotchView: View {
+    @ObservedObject var state: FocusIslandState
     @ObservedObject var timerModel: TimerModel
-    private let maxOverlayWidth: CGFloat = 900   // How wide the island can ever get
+    private let maxOverlayWidth: CGFloat = 900
     private let minOverlayWidth: CGFloat = 380
-    var sessionTitle: String = "Homework 1"
 
     var body: some View {
+        let session = state.currentSession ?? FocusSession(title: "--", length: 1)
         HStack(alignment: .top, spacing: 0) {
             // LEFT: Session info, centered
             VStack(alignment: .center, spacing: 14) {
@@ -22,12 +23,12 @@ struct ExpandedNotchView: View {
                     Image(systemName: "checkmark.seal.fill")
                         .foregroundColor(.blue)
                         .font(.system(size: 24, weight: .bold))
-                    Text(sessionTitle)
+                    Text(session.title)
                         .font(.system(size: 18, weight: .bold))
                         .foregroundColor(.white)
-                        .lineLimit(1)           // Only one line
-                        .truncationMode(.tail)  // Truncate with ...
-                        .layoutPriority(10)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .layoutPriority(1)
                 }
                 .padding(.horizontal, 8)
                 .frame(minWidth: 60, maxWidth: .infinity, alignment: .center)
@@ -43,20 +44,31 @@ struct ExpandedNotchView: View {
                 .background(.white.opacity(0.12))
                 .padding(.vertical, 10)
 
-            // CENTER: Timeline/Task List (same as before)
+            // CENTER: Timeline/tasks (dynamically rendered)
             VStack(alignment: .leading, spacing: 8) {
                 Text("Upcoming Timeline")
                     .font(.caption)
                     .foregroundColor(.gray)
-                ForEach(1..<5) { idx in
+                ForEach(state.sessions.indices, id: \.self) { idx in
+                    let s = state.sessions[idx]
                     HStack {
-                        Image(systemName: "circle.fill")
-                            .font(.system(size: 10))
-                            .foregroundColor(idx == 1 ? .orange : .gray)
-                        Text("Task \(idx): Placeholder")
+                        Image(systemName: idx < state.currentSessionIndex ? "checkmark.circle.fill"
+                                    : idx == state.currentSessionIndex ? "circle.fill" : "circle")
+                            .font(.system(size: 11))
+                            .foregroundColor(
+                                idx < state.currentSessionIndex ? .green
+                                : idx == state.currentSessionIndex ? .orange
+                                : .gray)
+                        Text(s.title)
                             .foregroundColor(.white)
-                            .fontWeight(idx == 1 ? .semibold : .regular)
+                            .fontWeight(idx == state.currentSessionIndex ? .bold : .regular)
+                        Spacer()
+                        Text(formattedLength(s.length))
+                            .foregroundColor(.orange)
+                            .font(.caption2.monospacedDigit())
                     }
+                    .opacity(idx < state.currentSessionIndex ? 0.48 : 1.0)
+                    .padding(.vertical, 1)
                 }
                 Spacer(minLength: 8)
             }
@@ -103,15 +115,16 @@ struct ExpandedNotchView: View {
         }
         .padding(.vertical, 20)
         .padding(.horizontal, 18)
-        .fixedSize(horizontal: true, vertical: false) // << This is the magic!
+        .fixedSize(horizontal: true, vertical: false)
         .frame(
             minWidth: minOverlayWidth,
-            maxWidth: maxOverlayWidth, // Cap overlay at some clan max width if session title is nuts
-            alignment: .center
+            maxWidth: maxOverlayWidth
         )
         .transition(.scale.combined(with: .opacity))
-        .onAppear {
-            print("Expanded view APPEARED")
-        }
+        .onAppear { print("Expanded view APPEARED") }
+    }
+
+    private func formattedLength(_ seconds: Int) -> String {
+        String(format: "%d:%02d", seconds / 60, seconds % 60)
     }
 }
