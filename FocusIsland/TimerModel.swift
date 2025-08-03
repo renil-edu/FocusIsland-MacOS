@@ -14,6 +14,7 @@ class TimerModel: ObservableObject {
     private(set) var totalDuration: Int
 
     private var timer: Timer?
+    var onCompletion: (() -> Void)?
 
     var progress: Double {
         totalDuration == 0 ? 1.0 : 1.0 - Double(secondsRemaining) / Double(totalDuration)
@@ -22,9 +23,6 @@ class TimerModel: ObservableObject {
     var timeDisplay: String {
         String(format: "%d:%02d", secondsRemaining / 60, secondsRemaining % 60)
     }
-
-    /// Closure called when the timer completes (hits zero)
-    var onCompletion: (() -> Void)?
 
     init(sessionDuration: Int) {
         self.totalDuration = sessionDuration
@@ -45,7 +43,6 @@ class TimerModel: ObservableObject {
         timer = nil
     }
 
-    /// Reset both the timer and its totalDuration to a new session length if provided
     func reset(to seconds: Int? = nil) {
         pause()
         if let s = seconds {

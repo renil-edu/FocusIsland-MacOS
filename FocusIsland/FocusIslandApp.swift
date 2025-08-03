@@ -25,14 +25,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         FocusSession(title: "Coding Project", length: 10),
         FocusSession(title: "Break", length: 5)
     ])
-    // Hold one TimerModel always
     let timerModel = TimerModel(sessionDuration: 15)
     var notch: DynamicNotch<ExpandedNotchView, CompactSessionView, CompactTimerView>?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // Setup the timer for the first session
         loadCurrentSession()
-        // Set up the window only ONCE!
         notch = DynamicNotch(
             hoverBehavior: .all,
             style: .notch,
@@ -43,22 +40,19 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         Task { await notch?.compact() }
     }
 
-    /// Loads correct timer state for the current session and wires completion logic
     private func loadCurrentSession() {
         guard let session = focusState.currentSession else { return }
-        // Reset timer to the correct new duration
         timerModel.reset(to: session.length)
         timerModel.start()
         timerModel.onCompletion = { [weak self] in
             guard let self = self else { return }
             self.focusState.markSessionComplete()
-            let nextIdx = self.focusState.currentSessionIndex + 1
-            if nextIdx < self.focusState.sessions.count {
-                // Advance session index & reset timer for new session
-                self.focusState.currentSessionIndex = nextIdx
-                self.loadCurrentSession()
+            // Do NOT increment currentSessionIndex.
+            // The new current session is now at the same index (0), or none left if all are done.
+            if let newSession = self.focusState.currentSession {
+                self.loadCurrentSession() // Keep going if more sessions remain
             }
-            // Otherwise, all sessions complete; optionally show 'Done!' or handle as you prefer
+            // Optionally: handle "all complete" UI if self.focusState.currentSession == nil
         }
     }
 }
