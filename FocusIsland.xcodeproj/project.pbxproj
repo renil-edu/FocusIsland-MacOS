@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		D9FF1F432E3EE755006E343A /* DynamicNotchKit in Frameworks */ = {isa = PBXBuildFile; productRef = D9FF1F422E3EE755006E343A /* DynamicNotchKit */; };
+		D9FF1F602E3F2346006E343A /* DynamicNotchKit in Frameworks */ = {isa = PBXBuildFile; productRef = D9FF1F5F2E3F2346006E343A /* DynamicNotchKit */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -61,7 +61,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D9FF1F432E3EE755006E343A /* DynamicNotchKit in Frameworks */,
+				D9FF1F602E3F2346006E343A /* DynamicNotchKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -124,7 +124,7 @@
 			);
 			name = FocusIsland;
 			packageProductDependencies = (
-				D9FF1F422E3EE755006E343A /* DynamicNotchKit */,
+				D9FF1F5F2E3F2346006E343A /* DynamicNotchKit */,
 			);
 			productName = FocusIsland;
 			productReference = D9FF1F092E3EC1CA006E343A /* FocusIsland.app */;
@@ -209,7 +209,7 @@
 			mainGroup = D9FF1F002E3EC1CA006E343A;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				D9FF1F412E3EE755006E343A /* XCRemoteSwiftPackageReference "DynamicNotchKit" */,
+				D9FF1F5E2E3F2346006E343A /* XCRemoteSwiftPackageReference "DynamicNotchKit" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = D9FF1F0A2E3EC1CA006E343A /* Products */;
@@ -559,20 +559,20 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		D9FF1F412E3EE755006E343A /* XCRemoteSwiftPackageReference "DynamicNotchKit" */ = {
+		D9FF1F5E2E3F2346006E343A /* XCRemoteSwiftPackageReference "DynamicNotchKit" */ = {
 			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/MrKai77/DynamicNotchKit";
+			repositoryURL = "https://github.com/renil-edu/DynamicNotchKit/";
 			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.0.0;
+				branch = "bugfix/hover-to-expand";
+				kind = branch;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		D9FF1F422E3EE755006E343A /* DynamicNotchKit */ = {
+		D9FF1F5F2E3F2346006E343A /* DynamicNotchKit */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = D9FF1F412E3EE755006E343A /* XCRemoteSwiftPackageReference "DynamicNotchKit" */;
+			package = D9FF1F5E2E3F2346006E343A /* XCRemoteSwiftPackageReference "DynamicNotchKit" */;
 			productName = DynamicNotchKit;
 		};
 /* End XCSwiftPackageProductDependency section */

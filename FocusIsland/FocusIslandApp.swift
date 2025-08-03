@@ -7,7 +7,6 @@
 
 
 
-
 import SwiftUI
 import DynamicNotchKit
 
@@ -16,20 +15,29 @@ struct FocusIslandApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     var body: some Scene {
-        // This doesn't create a real window unless the user opens app settings.
         Settings { EmptyView() }
     }
 }
 
 class AppDelegate: NSObject, NSApplicationDelegate {
-    var notch: DynamicNotch<ContentView, EmptyView, EmptyView>?
+    // Supply all 3 views to DynamicNotch
+    var notch: DynamicNotch<ExpandedNotchView, CompactSessionView, CompactTimerView>?
+    
+    
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // This is called when your app launches, before any SwiftUI scene appears
-        Task { @MainActor in
-            guard notch == nil else { return }
-            notch = DynamicNotch(expanded: { ContentView() })
-            await notch?.expand()
+        notch = DynamicNotch(
+            hoverBehavior: .all,
+            style: .notch,
+            expanded: { ExpandedNotchView() },
+            compactLeading: { CompactSessionView() },
+            compactTrailing: { CompactTimerView() }
+        )
+        // Delay compact mode to ensure window is fully ready
+        Task {
+            try? await Task.sleep(nanoseconds: 350_000_000)   // 350ms
+            await notch?.compact()
         }
     }
+
 }
