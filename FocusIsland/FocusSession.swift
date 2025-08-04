@@ -5,7 +5,6 @@
 //  Created by UT Austin on 8/3/25.
 //
 
-
 import Foundation
 
 enum ExpandedViewMode: Equatable {
@@ -32,19 +31,17 @@ class FocusIslandState: ObservableObject {
     @Published var currentSessionIndex: Int = 0
     @Published var expandedViewMode: ExpandedViewMode = .normal
 
+    // Notification overlay state for completion pop-up
+    @Published var showNotification: Bool = false
+    @Published var notificationMessage: String = ""
+
     init(sessions: [FocusSession]) {
         self.sessions = sessions
         self.currentSessionIndex = 0
     }
 
-    /// Only current and upcoming sessions remain in the list as soon as one is complete.
-    var sessionsToShow: [FocusSession] {
-        sessions
-    }
-
-    var editableSessions: [FocusSession] {
-        sessions
-    }
+    var sessionsToShow: [FocusSession] { sessions }
+    var editableSessions: [FocusSession] { sessions }
 
     var currentSession: FocusSession? {
         guard currentSessionIndex < sessions.count else { return nil }
@@ -54,10 +51,8 @@ class FocusIslandState: ObservableObject {
     /// Remove the current session as soon as it's complete; do NOT increment index.
     func markSessionComplete() {
         guard currentSessionIndex < sessions.count else { return }
-        // Uncomment to support graying out (future polish)
-        // sessions[currentSessionIndex].completed = true
         sessions.remove(at: currentSessionIndex)
-        // Do not increment currentSessionIndex: next session shifts to this index
+        // Next session (if any) is at currentSessionIndex now
     }
 
     func addSession(title: String, length: Int) {

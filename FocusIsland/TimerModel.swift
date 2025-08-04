@@ -5,7 +5,6 @@
 //  Created by UT Austin on 8/3/25.
 //
 
-
 import Foundation
 
 class TimerModel: ObservableObject {
@@ -30,37 +29,57 @@ class TimerModel: ObservableObject {
     }
 
     func start() {
-        guard !isRunning, secondsRemaining > 0 else { return }
+        print("🚀 Timer start() called - isRunning: \(isRunning), secondsRemaining: \(secondsRemaining)")
+        guard !isRunning, secondsRemaining > 0 else {
+            print("❌ Timer start() blocked - already running or no time left")
+            return
+        }
         isRunning = true
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
             self?.tick()
         }
+        print("✅ Timer started successfully")
     }
 
     func pause() {
+        print("⏸️ Timer pause() called")
         isRunning = false
         timer?.invalidate()
         timer = nil
+        print("✅ Timer paused successfully")
     }
 
     func reset(to seconds: Int? = nil) {
+        print("🔄 Timer reset() called with seconds: \(seconds ?? -1)")
+        
+        // Always pause first to clean up any existing timer
         pause()
+        
         if let s = seconds {
             totalDuration = s
             secondsRemaining = s
         } else {
             secondsRemaining = totalDuration
         }
+        
+        print("✅ Timer reset to \(secondsRemaining) seconds")
+        
+        // Force UI update on main thread
+        DispatchQueue.main.async { [weak self] in
+            self?.objectWillChange.send()
+        }
     }
 
     private func tick() {
         guard secondsRemaining > 0 else {
+            print("⏰ Timer tick() - time's up!")
             pause()
             onCompletion?()
             return
         }
         secondsRemaining -= 1
         if secondsRemaining == 0 {
+            print("⏰ Timer tick() - reached zero!")
             pause()
             onCompletion?()
         }
