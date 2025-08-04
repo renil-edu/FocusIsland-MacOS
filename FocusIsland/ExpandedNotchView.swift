@@ -12,7 +12,7 @@ struct ExpandedNotchView: View {
     @ObservedObject var timerModel: TimerModel
     let appDelegate: AppDelegate  // Direct reference!
 
-    // Editing state for Add/Edit
+    // Editing state for Add/Edit sessions (legacy mode)
     @State private var editingSessionID: UUID? = nil
     @State private var newTitle: String = ""
     @State private var editHour: String = "0"
@@ -65,16 +65,10 @@ struct ExpandedNotchView: View {
     private var mainExpandedContent: some View {
         Group {
             switch state.expandedViewMode {
-            case .editSessions:
-                EditSessionsView(
-                    state: state,
-                    editingSessionID: $editingSessionID,
-                    newTitle: $newTitle,
-                    editHour: $editHour,
-                    editMin: $editMin,
-                    editSec: $editSec,
-                    newLength: $newLength
-                )
+            case .editGoals:
+                EditGoalsView(state: state)
+            case .settings:
+                SettingsView(settings: state.settings, mode: $state.expandedViewMode)
             case .normal:
                 let session = state.currentSession ?? FocusSession(title: "--", length: 1)
                 HStack(alignment: .top, spacing: 0) {
@@ -112,14 +106,25 @@ struct ExpandedNotchView: View {
                                 .foregroundColor(.gray)
                             Spacer()
                             Button {
-                                state.expandedViewMode = .editSessions
+                                state.expandedViewMode = .editGoals
                             } label: {
                                 Image(systemName: "pencil.circle.fill")
                                     .foregroundColor(.orange)
                                     .font(.title3)
                             }
                             .buttonStyle(.plain)
-                            .help("Edit sessions")
+                            .help("Edit goals")
+                            
+                            Button {
+                                state.expandedViewMode = .settings
+                            } label: {
+                                Image(systemName: "gearshape.fill")
+                                    .foregroundColor(.orange)
+                                    .font(.title3)
+                            }
+                            .buttonStyle(.plain)
+                            .padding(.leading, 4)
+                            .help("Settings")
                         }
                         ForEach(
                             Array(state.sessionsToShow.prefix(maxUpcomingToShow).enumerated()),
@@ -226,191 +231,6 @@ struct ExpandedNotchView: View {
         } else {
             return String(format: "%d:%02d", m, s)
         }
-    }
-}
-
-// --- EDIT SESSIONS PAGE --- //
-struct EditSessionsView: View {
-    @ObservedObject var state: FocusIslandState
-    @Binding var editingSessionID: UUID?
-    @Binding var newTitle: String
-    @Binding var editHour: String
-    @Binding var editMin: String
-    @Binding var editSec: String
-    @Binding var newLength: String // unused
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Text("Edit Sessions")
-                    .font(.system(size: 20, weight: .bold))
-                    .foregroundColor(.white)
-                Spacer()
-                Button("Done") {
-                    state.expandedViewMode = .normal
-                }
-                .font(.system(size: 15, weight: .bold))
-                .buttonStyle(.borderedProminent)
-                .padding(.trailing, 2)
-            }
-            .padding(.bottom, 8)
-
-            ScrollView {
-                VStack(spacing: 15) {
-                    ForEach(state.sessions, id: \.id) { s in
-                        HStack(spacing: 44) {
-                            if editingSessionID == s.id {
-                                TextField("Title", text: $newTitle)
-                                    .font(.system(size: 16))
-                                    .textFieldStyle(.roundedBorder)
-                                    .frame(minWidth: 120, maxWidth: 220)
-                                HStack(spacing: 7) {
-                                    TextField("Hr", text: $editHour)
-                                        .font(.system(size: 15))
-                                        .frame(width: 35)
-                                        .textFieldStyle(.roundedBorder)
-                                    Text(":")
-                                        .font(.system(size: 15, weight: .bold))
-                                        .foregroundColor(.gray)
-                                    TextField("Min", text: $editMin)
-                                        .font(.system(size: 15))
-                                        .frame(width: 35)
-                                        .textFieldStyle(.roundedBorder)
-                                    Text(":")
-                                        .font(.system(size: 15, weight: .bold))
-                                        .foregroundColor(.gray)
-                                    TextField("Sec", text: $editSec)
-                                        .font(.system(size: 15))
-                                        .frame(width: 35)
-                                        .textFieldStyle(.roundedBorder)
-                                }
-                                Button("Save") {
-                                    let hour = Int(editHour) ?? 0
-                                    let min = Int(editMin) ?? 0
-                                    let sec = Int(editSec) ?? 0
-                                    let totalSec = hour * 3600 + min * 60 + sec
-                                    if !newTitle.isEmpty, totalSec > 0 {
-                                        state.updateSession(id: s.id, title: newTitle, length: totalSec)
-                                        editingSessionID = nil
-                                    }
-                                }
-                                .font(.system(size: 15, weight: .bold))
-                                .buttonStyle(.borderedProminent)
-                                Button("Cancel") {
-                                    editingSessionID = nil
-                                }
-                                .font(.system(size: 14, weight: .regular))
-                                .buttonStyle(.bordered)
-                            } else {
-                                Text(s.title)
-                                    .font(.system(size: 16))
-                                    .foregroundColor(.white)
-                                    .lineLimit(1)
-                                    .truncationMode(.tail)
-                                    .frame(minWidth: 120, maxWidth: 220, alignment: .leading)
-                                Text(formattedHourMinSec(s.length))
-                                    .font(.system(size: 15, design: .monospaced))
-                                    .foregroundColor(.orange)
-                                    .frame(width: 70, alignment: .leading)
-                                Button {
-                                    newTitle = s.title
-                                    let (h, m, sec) = secondsToHMS(s.length)
-                                    editHour = "\(h)"
-                                    editMin = "\(m)"
-                                    editSec = "\(sec)"
-                                    editingSessionID = s.id
-                                } label: {
-                                    Image(systemName: "pencil")
-                                        .font(.system(size: 17))
-                                }
-                                .buttonStyle(.plain)
-                                .help("Edit session")
-                                Button {
-                                    state.removeSession(id: s.id)
-                                } label: {
-                                    Image(systemName: "trash")
-                                        .font(.system(size: 17))
-                                        .foregroundColor(.red)
-                                }
-                                .buttonStyle(.plain)
-                                .help("Delete session")
-                            }
-                        }
-                        .padding(.vertical, 6)
-                    }
-                    if editingSessionID == nil {
-                        HStack(spacing: 44) {
-                            TextField("Title", text: $newTitle)
-                                .font(.system(size: 16))
-                                .textFieldStyle(.roundedBorder)
-                                .frame(minWidth: 120, maxWidth: 220)
-                            HStack(spacing: 7) {
-                                TextField("Hr", text: $editHour)
-                                    .font(.system(size: 15))
-                                    .frame(width: 35)
-                                    .textFieldStyle(.roundedBorder)
-                                Text(":")
-                                    .font(.system(size: 15, weight: .bold))
-                                    .foregroundColor(.gray)
-                                TextField("Min", text: $editMin)
-                                    .font(.system(size: 15))
-                                    .frame(width: 35)
-                                    .textFieldStyle(.roundedBorder)
-                                Text(":")
-                                    .font(.system(size: 15, weight: .bold))
-                                    .foregroundColor(.gray)
-                                TextField("Sec", text: $editSec)
-                                    .font(.system(size: 15))
-                                    .frame(width: 35)
-                                    .textFieldStyle(.roundedBorder)
-                            }
-                            Button("Add") {
-                                let hour = Int(editHour) ?? 0
-                                let min = Int(editMin) ?? 0
-                                let sec = Int(editSec) ?? 0
-                                let totalSec = hour * 3600 + min * 60 + sec
-                                if !newTitle.isEmpty, totalSec > 0 {
-                                    state.addSession(title: newTitle, length: totalSec)
-                                    newTitle = ""
-                                    editHour = "0"
-                                    editMin = "0"
-                                    editSec = "0"
-                                }
-                            }
-                            .font(.system(size: 15, weight: .bold))
-                            .buttonStyle(.borderedProminent)
-                        }
-                        .padding(.vertical, 6)
-                    }
-                }
-            }
-            .frame(maxHeight: 400)
-            Spacer()
-        }
-        .padding(.vertical, 20)
-        .padding(.horizontal, 60)
-        .fixedSize(horizontal: true, vertical: false)
-        .frame(
-            minWidth: 620, maxWidth: 900
-        )
-        .transition(.scale.combined(with: .opacity))
-    }
-
-    private func formattedHourMinSec(_ seconds: Int) -> String {
-        let h = seconds / 3600
-        let m = (seconds % 3600) / 60
-        let s = seconds % 60
-        if h > 0 {
-            return String(format: "%d:%02d:%02d", h, m, s)
-        } else {
-            return String(format: "%d:%02d", m, s)
-        }
-    }
-    private func secondsToHMS(_ seconds: Int) -> (Int, Int, Int) {
-        let h = seconds / 3600
-        let m = (seconds % 3600) / 60
-        let s = seconds % 60
-        return (h, m, s)
     }
 }
 
