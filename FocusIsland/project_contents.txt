@@ -9,11 +9,6 @@ File: FocusSession.swift
 
 import Foundation
 
-enum ExpandedViewMode: Equatable {
-    case normal
-    case editSessions
-}
-
 struct FocusSession: Identifiable, Equatable {
     let id: UUID
     var title: String
@@ -28,55 +23,432 @@ struct FocusSession: Identifiable, Equatable {
     }
 }
 
-class FocusIslandState: ObservableObject {
-    @Published var sessions: [FocusSession]
-    @Published var currentSessionIndex: Int = 0
-    @Published var expandedViewMode: ExpandedViewMode = .normal
 
-    // Notification overlay state for completion pop-up
-    @Published var showNotification: Bool = false
-    @Published var notificationMessage: String = ""
+================================================================================
 
-    init(sessions: [FocusSession]) {
-        self.sessions = sessions
-        self.currentSessionIndex = 0
+File: CalendarViewForSessions.swift
+================================================================================
+//
+//  CalendarViewForSessions.swift
+//  FocusIsland
+//
+//  Created by UT Austin on 8/6/25.
+//
+
+
+//
+//  CalendarViewForSessions.swift
+//  FocusIsland
+//
+//  Created by UT Austin on 8/6/25.
+//
+
+import SwiftUI
+
+struct CalendarViewForSessions: View {
+    let sessionBlocks: [CalendarSessionBlock]
+    let referenceTime: Date
+
+    private let rowH: CGFloat           = 120
+    private let hourWidth: CGFloat      = 275
+    private let hourLabelWidth: CGFloat = 40
+    private let visibleHours            = 12
+
+    @State private var hoveredBlockId: UUID? = nil
+    @State private var tooltipPosition: CGPoint = .zero
+
+    private var currentHour24: Int {
+        Calendar.current.component(.hour, from: Date())
+    }
+    
+    private var currentMinute: Int {
+        Calendar.current.component(.minute, from: Date())
     }
 
-    var sessionsToShow: [FocusSession] { sessions }
-    var editableSessions: [FocusSession] { sessions }
-
-    var currentSession: FocusSession? {
-        guard currentSessionIndex < sessions.count else { return nil }
-        return sessions[currentSessionIndex]
+    var body: some View {
+        let calendarScrollView = createScrollView()
+        
+        return calendarScrollView
+            .frame(height: 140)
+            .clipped()
+            .overlay(tooltipOverlay())
     }
-
-    /// Remove the current session as soon as it's complete; do NOT increment index.
-    func markSessionComplete() {
-        guard currentSessionIndex < sessions.count else { return }
-        sessions.remove(at: currentSessionIndex)
-        // Next session (if any) is at currentSessionIndex now
-    }
-
-    func addSession(title: String, length: Int) {
-        sessions.append(FocusSession(title: title, length: length))
-    }
-
-    func removeSession(id: UUID) {
-        if let idx = sessions.firstIndex(where: { $0.id == id }) {
-            sessions.remove(at: idx)
-            if idx < currentSessionIndex {
-                currentSessionIndex -= 1
+    
+    // MARK: - Main Components
+    
+    private func createScrollView() -> some View {
+        ScrollView(.vertical, showsIndicators: true) {
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(0..<visibleHours + 1) { offset in
+                    createHourRow(offset: offset)
+                }
             }
-            currentSessionIndex = max(0, min(currentSessionIndex, sessions.count - 1))
+            .background(Color(.sRGB, white: 0.14, opacity: 0.96))
+            .cornerRadius(16)
+            .frame(minWidth: hourWidth + 100, maxWidth: hourWidth + 100)
+        }
+    }
+    
+    private func createHourRow(offset: Int) -> some View {
+        let h24 = (currentHour24 + offset) % 24
+        let isCurrentHour = (offset == 0)
+        
+        return ZStack {
+            // Hour label and grid line
+            HStack(spacing: 0) {
+                Text(hourLabel(for: h24))
+                    .frame(width: hourLabelWidth, alignment: .trailing)
+                    .font(.caption)
+                    .foregroundColor(.gray.opacity(0.9))
+                Rectangle()
+                    .fill(Color.white.opacity(0.10))
+                    .frame(height: 1)
+                Spacer()
+            }
+            .frame(height: rowH, alignment: .top)
+            
+            // Session blocks for this hour with alternating positioning
+            createSessionBlocks(for: h24)
+            
+            // "Now" red line - spans full width
+            if isCurrentHour {
+                createRedLine()
+            }
+        }
+        .frame(height: rowH)
+    }
+    
+    private func createSessionBlocks(for hour: Int) -> some View {
+        let hourBlocks = sessionBlocks.filter { blockForHour($0, hour: hour) }
+        
+        return ForEach(Array(hourBlocks.enumerated()), id: \.element.id) { blockIndex, blk in
+            createSessionBlock(blk: blk, blockIndex: blockIndex)
+        }
+    }
+    
+    private func createSessionBlock(blk: CalendarSessionBlock, blockIndex: Int) -> some View {
+        let (top, height) = rect(for: blk, relativeTo: Calendar.current.component(.hour, from: blk.start))
+        let isLeftSide = blockIndex % 2 == 0
+        let eventWidth = ((hourWidth - hourLabelWidth - 20) + 60) / 2
+        
+        return RoundedRectangle(cornerRadius: 8)
+            .fill(blk.color)
+            .frame(width: eventWidth, height: max(height, 16))
+            .overlay(createSessionOverlay(blk: blk))
+            .position(
+                x: isLeftSide ? 
+                    (hourLabelWidth + 10 + eventWidth / 2) :
+                    (hourLabelWidth + 10 + eventWidth * 1.5),
+                y: top + max(height, 16) / 2
+            )
+            .onHover { isHovering in
+                handleHover(isHovering: isHovering, blk: blk, isLeftSide: isLeftSide, eventWidth: eventWidth, top: top)
+            }
+    }
+    
+    private func createSessionOverlay(blk: CalendarSessionBlock) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(blk.title)
+                .font(.system(size: 13, weight: blk.isCurrent ? .bold : .regular))
+                .foregroundColor(.white)
+                .lineLimit(2)
+            Text(timeSpan(blk))
+                .font(.caption2)
+                .foregroundColor(.white.opacity(0.75))
+        }
+        .padding(.leading, 6)
+        .padding(.top, 2)
+    }
+    
+    private func createRedLine() -> some View {
+        Rectangle()
+            .fill(Color.red)
+            .frame(width: (hourWidth - hourLabelWidth - 20) + 60, height: 2)
+            .position(
+                x: hourLabelWidth + 10 + ((hourWidth - hourLabelWidth - 20) + 60) / 2,
+                y: CGFloat(currentMinute) * (rowH / 60.0)
+            )
+    }
+    
+    private func tooltipOverlay() -> some View {
+        Group {
+            if let hoveredId = hoveredBlockId,
+               let hoveredBlock = sessionBlocks.first(where: { $0.id == hoveredId }) {
+                CalendarTooltip(
+                    title: hoveredBlock.title,
+                    timeSpan: timeSpan(hoveredBlock)
+                )
+                .position(tooltipPosition)
+                .zIndex(1000)
+                .animation(.easeInOut(duration: 0.15), value: hoveredBlockId)
+            }
+        }
+    }
+    
+    // MARK: - Event Handlers
+    
+    private func handleHover(isHovering: Bool, blk: CalendarSessionBlock, isLeftSide: Bool, eventWidth: CGFloat, top: CGFloat) {
+        if isHovering {
+            hoveredBlockId = blk.id
+            // Calculate tooltip position above the event
+            let x = isLeftSide ? 
+                (hourLabelWidth + 10 + eventWidth / 2) :
+                (hourLabelWidth + 10 + eventWidth * 1.5)
+            let y = top - 10 // Position above the event
+            tooltipPosition = CGPoint(x: x, y: y)
+        } else {
+            hoveredBlockId = nil
         }
     }
 
-    func updateSession(id: UUID, title: String, length: Int) {
-        if let idx = sessions.firstIndex(where: { $0.id == id }) {
-            sessions[idx].title = title
-            sessions[idx].length = length
+    // MARK: - Helper Functions
+    
+    private func hourLabel(for h24: Int) -> String {
+        let h12 = (h24 == 0 || h24 == 12) ? 12 : h24 % 12
+        return "\(h12)\(h24 < 12 ? "AM" : "PM")"
+    }
+    
+    private func minutesSince(_ a: Date, _ b: Date) -> Int {
+        max(0, Int(b.timeIntervalSince(a) / 60))
+    }
+    
+    private func blockForHour(_ blk: CalendarSessionBlock, hour: Int) -> Bool {
+        let cal = Calendar.current
+        let startHour = cal.component(.hour, from: blk.start)
+        let endHour = cal.component(.hour, from: blk.end)
+        if endHour < startHour {
+            return hour >= startHour || hour <= endHour
+        }
+        return hour >= startHour && hour <= endHour
+    }
+    
+    private func rect(for blk: CalendarSessionBlock, relativeTo hour: Int) -> (CGFloat, CGFloat) {
+        let cal = Calendar.current
+        let startMin = (cal.component(.hour, from: blk.start) == hour) ? cal.component(.minute, from: blk.start) : 0
+        let endMin = (cal.component(.hour, from: blk.end) == hour) ? cal.component(.minute, from: blk.end) : 60
+        let top = CGFloat(startMin) * (rowH / 60.0)
+        let height = CGFloat(endMin - startMin) * (rowH / 60.0)
+        return (top, max(height, 6))
+    }
+    
+    private func timeSpan(_ blk: CalendarSessionBlock) -> String {
+        let f = DateFormatter(); f.dateFormat = "h:mm a"
+        return "\(f.string(from: blk.start)) – \(f.string(from: blk.end))"
+    }
+}
+
+
+================================================================================
+
+File: SettingsView.swift
+================================================================================
+//
+//  SettingsView.swift
+//  FocusIsland
+//
+//  Created by UT Austin on 8/4/25.
+//
+
+import SwiftUI
+
+/// Notch-style overlay for editing FocusSettings.
+struct SettingsView: View {
+    @ObservedObject var settings: FocusSettings
+    @Binding var mode: ExpandedViewMode
+    
+    // Local state to prevent excessive updates
+    @State private var localFocusMinutes: Int = 20
+    @State private var localBreakMinutes: Int = 10
+    @State private var localScalingFactor: String = "0.17"
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 24) {
+            HStack {
+                Text("Focus Settings")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(.white)
+                Spacer()
+                Button("Done") {
+                    saveSettings()
+                    mode = .normal
+                }
+                .buttonStyle(.borderedProminent)
+            }
+
+            settingRow(title: "Focus Session Length",
+                       value: $localFocusMinutes,
+                       range: 5...90,
+                       suffix: "min")
+
+            settingRow(title: "Standard Break Length",
+                       value: $localBreakMinutes,
+                       range: 5...60,
+                       suffix: "min")
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Post-Goal Break Scaling Factor")
+                    .foregroundColor(.white)
+                    .font(.system(size: 16))
+                
+                HStack(spacing: 12) {
+                    Button("-") {
+                        adjustScalingFactor(by: -0.05)
+                    }
+                    .buttonStyle(.bordered)
+                    .frame(width: 32, height: 28)
+                    
+                    TextField("Factor", text: $localScalingFactor)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(width: 80)
+                        .onSubmit {
+                            validateScalingFactor()
+                        }
+                    
+                    Button("+") {
+                        adjustScalingFactor(by: 0.05)
+                    }
+                    .buttonStyle(.bordered)
+                    .frame(width: 32, height: 28)
+                    
+                    Text("(0.05 - 0.50)")
+                        .foregroundColor(.gray)
+                        .font(.caption)
+                }
+            }
+
+            Spacer()
+        }
+        .padding(40)
+        .frame(minWidth: 420, maxWidth: 520, minHeight: 240)
+        .background(
+            RoundedRectangle(cornerRadius: 32, style: .continuous)
+                .fill(Color(.sRGB, white: 0.12, opacity: 0.97))
+        )
+        .onAppear {
+            loadCurrentSettings()
         }
     }
+
+    @ViewBuilder
+    private func settingRow(title: String,
+                            value: Binding<Int>,
+                            range: ClosedRange<Int>,
+                            suffix: String) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .foregroundColor(.white)
+                .font(.system(size: 16))
+            
+            HStack(spacing: 12) {
+                Button("-") {
+                    if value.wrappedValue > range.lowerBound {
+                        value.wrappedValue -= 1
+                    }
+                }
+                .buttonStyle(.bordered)
+                .frame(width: 32, height: 28)
+                
+                Text("\(value.wrappedValue) \(suffix)")
+                    .foregroundColor(.orange)
+                    .font(.system(size: 16, weight: .medium))
+                    .frame(width: 80, alignment: .center)
+                
+                Button("+") {
+                    if value.wrappedValue < range.upperBound {
+                        value.wrappedValue += 1
+                    }
+                }
+                .buttonStyle(.bordered)
+                .frame(width: 32, height: 28)
+            }
+        }
+    }
+    
+    // MARK: - Helper functions
+    private func loadCurrentSettings() {
+        localFocusMinutes = settings.focusMinutes
+        localBreakMinutes = settings.standardBreakMinutes
+        localScalingFactor = String(format: "%.2f", settings.scalingFactor)
+    }
+    
+    private func saveSettings() {
+        settings.focusMinutes = localFocusMinutes
+        settings.standardBreakMinutes = localBreakMinutes
+        settings.scalingFactor = Double(localScalingFactor) ?? 0.17
+    }
+    
+    private func adjustScalingFactor(by amount: Double) {
+        let currentValue = Double(localScalingFactor) ?? 0.17
+        let newValue = max(0.05, min(0.50, currentValue + amount))
+        localScalingFactor = String(format: "%.2f", newValue)
+    }
+    
+    private func validateScalingFactor() {
+        let value = Double(localScalingFactor) ?? 0.17
+        let clampedValue = max(0.05, min(0.50, value))
+        localScalingFactor = String(format: "%.2f", clampedValue)
+    }
+}
+
+
+================================================================================
+
+File: CalendarModels.swift
+================================================================================
+//
+//  CalendarModels.swift
+//  FocusIsland
+//
+//  Created by UT Austin on 8/6/25.
+//
+
+import SwiftUI
+
+// MARK: - Calendar Data Models
+
+struct CalendarSessionBlock: Identifiable {
+    let id = UUID()
+    let title: String
+    let start: Date
+    let end: Date
+    let isCurrent: Bool
+    let color: Color
+}
+
+// MARK: - Helper Functions
+
+func makeCalendarSessionBlocks(state: FocusIslandState,
+                               timerModel: TimerModel) -> [CalendarSessionBlock] {
+    let now = Date()
+    let anchor: Date = {
+        guard let cur = state.currentSession else { return now }
+        let elapsed = cur.length - timerModel.secondsRemaining
+        return now.addingTimeInterval(-TimeInterval(elapsed))
+    }()
+
+    var blocks: [CalendarSessionBlock] = []
+    var cursor = anchor
+
+    for (idx, session) in state.sessions[state.currentSessionIndex...].enumerated() {
+        let end = cursor.addingTimeInterval(TimeInterval(session.length))
+        if end < anchor { cursor = end; continue }
+        if cursor >= anchor.addingTimeInterval(12 * 3600) { break }
+
+        blocks.append(
+            CalendarSessionBlock(
+                title: session.title,
+                start: cursor,
+                end: end,
+                isCurrent: idx == 0,
+                color: session.title.lowercased().contains("break")
+                       ? Color.blue.opacity(0.38)
+                       : (idx == 0 ? Color.orange.opacity(0.75)
+                                   : Color.blue.opacity(0.82))
+            )
+        )
+        cursor = end
+    }
+    return blocks
 }
 
 
@@ -98,6 +470,220 @@ File: FocusIsland.entitlements
 
 ================================================================================
 
+File: Goal.swift
+================================================================================
+//
+//  Goal.swift
+//  FocusIsland
+//
+//  Created by UT Austin on 8/3/25.
+//
+
+
+//
+//  Goal.swift
+//  FocusIsland
+//
+//  Created by UT Austin on 8/4/25.
+//
+
+import Foundation
+
+/// A high-level work item entered by the user.
+struct Goal: Identifiable, Equatable, Codable {
+    let id: UUID
+    var title: String
+    /// Estimated duration in **minutes**.
+    var minutes: Int
+
+    init(title: String, minutes: Int) {
+        self.id     = UUID()
+        self.title  = title
+        self.minutes = minutes
+    }
+}
+
+
+================================================================================
+
+File: SessionCalendarView.swift
+================================================================================
+//
+//  SessionCalendarView.swift
+//  FocusIsland
+//
+//  Inspired by Apple Calendar Day View (12-hour version)
+//
+
+import SwiftUI
+
+struct SessionBlock: Identifiable {
+    let id = UUID()
+    let title: String
+    let start: Date
+    let end: Date
+    let isCurrent: Bool
+    let color: Color
+}
+
+struct SessionCalendarView: View {
+    let sessionBlocks: [SessionBlock]
+    let referenceTime: Date   // Use Date() when ticking, or frozen time if paused
+
+    private let hourHeight: CGFloat = 64 // px per hour
+
+    var body: some View {
+        ScrollView(showsIndicators: true) {
+            ZStack(alignment: .top) {
+                // Hour grid lines and labels
+                ForEach(0..<13) { hourOffset in
+                    let hour = Calendar.current.component(.hour, from: referenceTime) + hourOffset
+                    let y = CGFloat(hourOffset) * hourHeight
+                    HStack(spacing: 0) {
+                        Text(label(for: hour % 24))
+                            .frame(width: 38, alignment: .trailing)
+                            .font(.caption2)
+                            .foregroundColor(.gray)
+                            .opacity(0.95)
+                        Rectangle().frame(height: 1)
+                            .foregroundColor(Color.white.opacity(0.09))
+                        Spacer()
+                    }
+                    .offset(y: y)
+                }
+
+                // Session blocks
+                ForEach(sessionBlocks) { block in
+                    let (top, height) = blockRect(block: block)
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(block.color)
+                        .frame(width: 168, height: max(height, 16))
+                        .overlay(
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(block.title)
+                                    .fontWeight(block.isCurrent ? .bold : .medium)
+                                    .foregroundColor(.white)
+                                    .lineLimit(1)
+                                    .font(.system(size: 14))
+                                Text(timeSpanString(start: block.start, end: block.end))
+                                    .font(.caption2).foregroundColor(.white.opacity(0.75))
+                            }.padding(.leading, 8).padding(.vertical, 3),
+                            alignment: .topLeading
+                        )
+                        .offset(x: 44, y: top)
+                        .shadow(color: Color.black.opacity(0.08), radius: 2, x: 1, y: 2)
+                }
+
+                // Current time line
+                let nowY = CGFloat(minutesSince(referenceTime, from: referenceTime)) / 60.0 * hourHeight
+                Rectangle()
+                    .fill(Color.red.opacity(0.93))
+                    .frame(height: 2)
+                    .offset(x: 40, y: nowY-1)
+            }
+            .frame(height: hourHeight * 12)
+        }
+        .frame(minWidth: 250, maxWidth: 250)
+        .background(Color(.sRGB, white: 0.14, opacity: 0.96))
+        .cornerRadius(18)
+    }
+
+    // MARK: - Geometry
+
+    private func label(for hour: Int) -> String {
+        let hour12 = (hour == 0 || hour == 12) ? 12 : hour % 12
+        let ampm = hour < 12 || hour == 24 ? "AM" : "PM"
+        return "\(hour12)\(ampm)"
+    }
+
+    // offset from referenceTime, in minutes
+    private func minutesSince(_ time: Date, from: Date) -> Int {
+        let delta = time.timeIntervalSince(from)
+        return max(0, Int(delta/60))
+    }
+    // Returns (top, height) in px for block in the 12h window starting at referenceTime
+    private func blockRect(block: SessionBlock) -> (CGFloat, CGFloat) {
+        let startMins = Double(minutesSince(block.start, from: referenceTime))
+        let endMins   = Double(minutesSince(block.end, from: referenceTime))
+        let minY = max(0.0, min(startMins/60.0 * hourHeight, hourHeight*12))
+        let maxY = min(max(endMins/60.0 * hourHeight, minY), hourHeight*12)
+        let blockHeight = maxY - minY
+        return (minY, blockHeight)
+    }
+
+    private func timeSpanString(start: Date, end: Date) -> String {
+        let fmt = DateFormatter()
+        fmt.dateFormat = "h:mm a"
+        return "\(fmt.string(from: start)) – \(fmt.string(from: end))"
+    }
+}
+
+
+================================================================================
+
+File: SessionGenerator.swift
+================================================================================
+//
+//  SessionGenerator.swift
+//  FocusIsland
+//
+//  Created by UT Austin on 8/3/25.
+//
+
+
+//
+//  SessionGenerator.swift
+//  FocusIsland
+//
+//  Created by UT Austin on 8/4/25.
+//
+
+import Foundation
+
+/// Pure-function helper that converts Goals → FocusSessions using current settings.
+enum SessionGenerator {
+    static func build(from goals: [Goal],
+                      settings: FocusSettings) -> [FocusSession] {
+
+        var sessions: [FocusSession] = []
+
+        for goal in goals {
+            var remaining = goal.minutes
+            var chunkIdx  = 1
+            // Break goal into focus chunks
+            while remaining > 0 {
+                let chunk = min(remaining, settings.focusMinutes)
+                sessions.append(
+                    FocusSession(title: "\(goal.title), Session \(chunkIdx)",
+                                 length: chunk * 60) // store in seconds
+                )
+                remaining -= chunk
+                chunkIdx  += 1
+
+                if remaining > 0 {
+                    // Standard break between focus chunks
+                    sessions.append(
+                        FocusSession(title: "Break",
+                                     length: settings.standardBreakMinutes * 60)
+                    )
+                }
+            }
+
+            // Post-goal break
+            let extra = Int(ceil(Double(goal.minutes) * settings.scalingFactor))
+            let post  = settings.standardBreakMinutes + extra
+            sessions.append(
+                FocusSession(title: "Break",
+                             length: post * 60)
+            )
+        }
+        return sessions
+    }
+}
+
+
+================================================================================
+
 File: FocusIslandApp.swift
 ================================================================================
 //
@@ -113,67 +699,226 @@ import DynamicNotchKit
 @main
 struct FocusIslandApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-
-    var body: some Scene {
-        Settings { EmptyView() }
-    }
+    var body: some Scene { Settings { EmptyView() } }
 }
 
-class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
-    let focusState = FocusIslandState(sessions: [
-        FocusSession(title: "Homework 1", length: 15),
-        FocusSession(title: "Resume Polishing", length: 10),
-        FocusSession(title: "Coding Project", length: 10),
-        FocusSession(title: "Break", length: 5)
-    ])
-    let timerModel = TimerModel(sessionDuration: 15)
-    var notch: DynamicNotch<ExpandedNotchView, CompactSessionView, CompactTimerView>?
+final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
 
-    // Pool of congratulatory messages
-    let congratulatoryMessages = [
-        "Section complete!",
-        "Nice work!",
-        "Well done!",
-        "Keep it up!",
-        "Great focus!",
-        "Finished!",
-        "Good job!"
+    // MARK: — Status Bar
+    var statusBarItem: NSStatusItem!
+    
+    // MARK: — Core singleton models
+    let settings  = FocusSettings.load()
+    lazy var state: FocusIslandState = {
+        FocusIslandState(
+            goals: [
+                Goal(title: "Homework 1",     minutes: 60),
+                Goal(title: "Coding Project", minutes: 30),
+                Goal(title: "Resume Fixing",  minutes: 20)
+            ],
+            settings: settings
+        )
+    }()
+    let timerModel = TimerModel(sessionDuration: 1)
+
+    // MARK: — UI (Dynamic Notch)
+    var notch: DynamicNotch<ExpandedNotchView,
+                            CompactSessionView,
+                            CompactTimerView>?
+
+    // MARK: — App State
+    @Published var isNotchHidden = false
+
+    // MARK: — Messages
+    private let congrats = [
+        "Section complete!", "Nice work!", "Well done!",
+        "Keep it up!", "Great focus!", "Finished!", "Good job!"
+    ]
+    private let finals = [
+        "All sessions complete!", "Great work today!",
+        "You did it!", "Sessions finished!",
+        "Well done!", "All done!"
     ]
 
-    func applicationDidFinishLaunching(_ notification: Notification) {
+    // MARK: — Launch
+    func applicationDidFinishLaunching(_ n: Notification) {
+        // Set the app activation policy to prevent dock appearance
+        NSApp.setActivationPolicy(.accessory)
+        
+        // Setup status bar
+        setupStatusBar()
+        
+        // Setup notch
         loadCurrentSession()
         notch = DynamicNotch(
             hoverBehavior: .all,
             style: .notch,
-            expanded: {
-                ExpandedNotchView(
-                    state: self.focusState,
-                    timerModel: self.timerModel
-                )
-            },
-            compactLeading: { CompactSessionView(state: self.focusState) },
+            expanded: { ExpandedNotchView(state: self.state,
+                                          timerModel: self.timerModel,
+                                          appDelegate: self) },
+            compactLeading: { CompactSessionView(state: self.state) },
             compactTrailing: { CompactTimerView(timerModel: self.timerModel) }
         )
         Task { await notch?.compact() }
     }
+    
+    // Prevent app from quitting when all windows are closed
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        return false
+    }
+    
+    // MARK: — Status Bar Setup
+    private func setupStatusBar() {
+        statusBarItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        
+        if let button = statusBarItem.button {
+            button.image = NSImage(systemSymbolName: "circle.fill", accessibilityDescription: "FocusIsland")
+            button.imageScaling = .scaleProportionallyUpOrDown
+        }
+        
+        let menu = NSMenu()
+        
+        // Show/Hide Dynamic Island
+        let toggleItem = NSMenuItem(
+            title: isNotchHidden ? "Show Focus Island" : "Hide Focus Island",
+            action: #selector(toggleNotchVisibility),
+            keyEquivalent: "h"
+        )
+        toggleItem.target = self
+        menu.addItem(toggleItem)
+        
+        menu.addItem(NSMenuItem.separator())
+        
+        // Current session info
+        if let session = state.currentSession {
+            let sessionItem = NSMenuItem(title: "Current: \(session.title)", action: nil, keyEquivalent: "")
+            sessionItem.isEnabled = false
+            menu.addItem(sessionItem)
+            
+            let timerItem = NSMenuItem(title: "Time: \(timerModel.timeDisplay)", action: nil, keyEquivalent: "")
+            timerItem.isEnabled = false
+            menu.addItem(timerItem)
+            
+            menu.addItem(NSMenuItem.separator())
+        }
+        
+        // Pause/Resume
+        let playPauseItem = NSMenuItem(
+            title: timerModel.isRunning ? "Pause Timer" : "Resume Timer",
+            action: #selector(toggleTimer),
+            keyEquivalent: "p"
+        )
+        playPauseItem.target = self
+        menu.addItem(playPauseItem)
+        
+        menu.addItem(NSMenuItem.separator())
+        
+        // Quit
+        let quitItem = NSMenuItem(title: "Quit FocusIsland", action: #selector(quitApp), keyEquivalent: "q")
+        quitItem.target = self
+        menu.addItem(quitItem)
+        
+        statusBarItem.menu = menu
+        
+        // Update menu periodically
+        Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
+            self.updateStatusBarMenu()
+        }
+    }
+    
+    // MARK: — Status Bar Actions
+    @objc func toggleNotchVisibility() {
+        isNotchHidden.toggle()
+        
+        if isNotchHidden {
+            Task { await notch?.hide() }
+        } else {
+            Task { await notch?.compact() }
+        }
+        
+        updateStatusBarMenu()
+    }
+    
+    @objc private func toggleTimer() {
+        if timerModel.isRunning {
+            timerModel.pause()
+        } else {
+            timerModel.start()
+        }
+    }
+    
+    @objc private func quitApp() {
+        NSApplication.shared.terminate(nil)
+    }
+    
+    private func updateStatusBarMenu() {
+        guard let menu = statusBarItem.menu else { return }
+        
+        // Update toggle item
+        if let toggleItem = menu.item(at: 0) {
+            toggleItem.title = isNotchHidden ? "Show Focus Island" : "Hide Focus Island"
+        }
+        
+        // Update current session info (rebuild the relevant menu items)
+        // Remove old session items (items 2, 3, 4 if they exist)
+        while menu.numberOfItems > 6 {
+            menu.removeItem(at: 2)
+        }
+        
+        if let session = state.currentSession {
+            let sessionItem = NSMenuItem(title: "Current: \(session.title)", action: nil, keyEquivalent: "")
+            sessionItem.isEnabled = false
+            menu.insertItem(sessionItem, at: 2)
+            
+            let timerItem = NSMenuItem(title: "Time: \(timerModel.timeDisplay)", action: nil, keyEquivalent: "")
+            timerItem.isEnabled = false
+            menu.insertItem(timerItem, at: 3)
+            
+            menu.insertItem(NSMenuItem.separator(), at: 4)
+        }
+        
+        // Update play/pause item
+        if let playPauseItem = menu.items.first(where: { $0.action == #selector(toggleTimer) }) {
+            playPauseItem.title = timerModel.isRunning ? "Pause Timer" : "Resume Timer"
+        }
+    }
 
+    // MARK: — Session lifecycle
     func loadCurrentSession() {
-        guard let session = focusState.currentSession else {
+        timerModel.pause()
+        timerModel.onCompletion = nil
+
+        guard let session = state.currentSession else {
             timerModel.reset(to: 0)
-            timerModel.onCompletion = nil
             return
         }
         timerModel.reset(to: session.length)
-        timerModel.onCompletion = { [weak self] in
-            guard let self = self else { return }
-            self.focusState.markSessionComplete() // state changes before next load!
-            if self.focusState.currentSession != nil {
-                self.focusState.notificationMessage = self.congratulatoryMessages.randomElement() ?? "Section complete!"
-                self.focusState.showNotification = true
-                DispatchQueue.main.async {
-                    Task { await self.notch?.expand() }
-                }
-            }
+        timerModel.onCompletion = { [weak self] in self?.handleCompletion() }
+    }
+
+    private func handleCompletion() {
+        state.markSessionComplete()
+
+        // Decide message
+        state.notificationMessage = state.currentSession == nil
+            ? finals.randomElement()!
+            : congrats.randomElement()!
+        state.showNotification = true
+        
+        // Always show notch for completion notifications
+        if isNotchHidden {
+            isNotchHidden = false
+        }
+        
+        Task { await notch?.expand() }
+    }
+
+    func notificationDismissed() {
+        if state.currentSession == nil {
+            timerModel.reset(to: 0)
+            timerModel.onCompletion = nil
+        } else {
+            loadCurrentSession()
         }
     }
 }
@@ -189,7 +934,6 @@ File: TimerModel.swift
 //
 //  Created by UT Austin on 8/3/25.
 //
-
 
 import Foundation
 
@@ -215,37 +959,57 @@ class TimerModel: ObservableObject {
     }
 
     func start() {
-        guard !isRunning, secondsRemaining > 0 else { return }
+        print("🚀 Timer start() called - isRunning: \(isRunning), secondsRemaining: \(secondsRemaining)")
+        guard !isRunning, secondsRemaining > 0 else {
+            print("❌ Timer start() blocked - already running or no time left")
+            return
+        }
         isRunning = true
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
             self?.tick()
         }
+        print("✅ Timer started successfully")
     }
 
     func pause() {
+        print("⏸️ Timer pause() called")
         isRunning = false
         timer?.invalidate()
         timer = nil
+        print("✅ Timer paused successfully")
     }
 
     func reset(to seconds: Int? = nil) {
+        print("🔄 Timer reset() called with seconds: \(seconds ?? -1)")
+        
+        // Always pause first to clean up any existing timer
         pause()
+        
         if let s = seconds {
             totalDuration = s
             secondsRemaining = s
         } else {
             secondsRemaining = totalDuration
         }
+        
+        print("✅ Timer reset to \(secondsRemaining) seconds")
+        
+        // Force UI update on main thread
+        DispatchQueue.main.async { [weak self] in
+            self?.objectWillChange.send()
+        }
     }
 
     private func tick() {
         guard secondsRemaining > 0 else {
+            print("⏰ Timer tick() - time's up!")
             pause()
             onCompletion?()
             return
         }
         secondsRemaining -= 1
         if secondsRemaining == 0 {
+            print("⏰ Timer tick() - reached zero!")
             pause()
             onCompletion?()
         }
@@ -260,6 +1024,936 @@ class TimerModel: ObservableObject {
 ================================================================================
 
 File: project_contents.txt
+================================================================================
+File: FocusSession.swift
+================================================================================
+//
+//  FocusSession.swift
+//  FocusIsland
+//
+//  Created by UT Austin on 8/3/25.
+//
+
+import Foundation
+
+struct FocusSession: Identifiable, Equatable {
+    let id: UUID
+    var title: String
+    var length: Int      // in seconds
+    var completed: Bool
+
+    init(title: String, length: Int, completed: Bool = false) {
+        self.id = UUID()
+        self.title = title
+        self.length = length
+        self.completed = completed
+    }
+}
+
+
+================================================================================
+
+File: CalendarViewForSessions.swift
+================================================================================
+//
+//  CalendarViewForSessions.swift
+//  FocusIsland
+//
+//  Created by UT Austin on 8/6/25.
+//
+
+
+//
+//  CalendarViewForSessions.swift
+//  FocusIsland
+//
+//  Created by UT Austin on 8/6/25.
+//
+
+import SwiftUI
+
+struct CalendarViewForSessions: View {
+    let sessionBlocks: [CalendarSessionBlock]
+    let referenceTime: Date
+
+    private let rowH: CGFloat           = 120
+    private let hourWidth: CGFloat      = 275
+    private let hourLabelWidth: CGFloat = 40
+    private let visibleHours            = 12
+
+    @State private var hoveredBlockId: UUID? = nil
+    @State private var tooltipPosition: CGPoint = .zero
+
+    private var currentHour24: Int {
+        Calendar.current.component(.hour, from: Date())
+    }
+    
+    private var currentMinute: Int {
+        Calendar.current.component(.minute, from: Date())
+    }
+
+    var body: some View {
+        let calendarScrollView = createScrollView()
+        
+        return calendarScrollView
+            .frame(height: 140)
+            .clipped()
+            .overlay(tooltipOverlay())
+    }
+    
+    // MARK: - Main Components
+    
+    private func createScrollView() -> some View {
+        ScrollView(.vertical, showsIndicators: true) {
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(0..<visibleHours + 1) { offset in
+                    createHourRow(offset: offset)
+                }
+            }
+            .background(Color(.sRGB, white: 0.14, opacity: 0.96))
+            .cornerRadius(16)
+            .frame(minWidth: hourWidth + 100, maxWidth: hourWidth + 100)
+        }
+    }
+    
+    private func createHourRow(offset: Int) -> some View {
+        let h24 = (currentHour24 + offset) % 24
+        let isCurrentHour = (offset == 0)
+        
+        return ZStack {
+            // Hour label and grid line
+            HStack(spacing: 0) {
+                Text(hourLabel(for: h24))
+                    .frame(width: hourLabelWidth, alignment: .trailing)
+                    .font(.caption)
+                    .foregroundColor(.gray.opacity(0.9))
+                Rectangle()
+                    .fill(Color.white.opacity(0.10))
+                    .frame(height: 1)
+                Spacer()
+            }
+            .frame(height: rowH, alignment: .top)
+            
+            // Session blocks for this hour with alternating positioning
+            createSessionBlocks(for: h24)
+            
+            // "Now" red line - spans full width
+            if isCurrentHour {
+                createRedLine()
+            }
+        }
+        .frame(height: rowH)
+    }
+    
+    private func createSessionBlocks(for hour: Int) -> some View {
+        let hourBlocks = sessionBlocks.filter { blockForHour($0, hour: hour) }
+        
+        return ForEach(Array(hourBlocks.enumerated()), id: \.element.id) { blockIndex, blk in
+            createSessionBlock(blk: blk, blockIndex: blockIndex)
+        }
+    }
+    
+    private func createSessionBlock(blk: CalendarSessionBlock, blockIndex: Int) -> some View {
+        let (top, height) = rect(for: blk, relativeTo: Calendar.current.component(.hour, from: blk.start))
+        let isLeftSide = blockIndex % 2 == 0
+        let eventWidth = ((hourWidth - hourLabelWidth - 20) + 60) / 2
+        
+        return RoundedRectangle(cornerRadius: 8)
+            .fill(blk.color)
+            .frame(width: eventWidth, height: max(height, 16))
+            .overlay(createSessionOverlay(blk: blk))
+            .position(
+                x: isLeftSide ? 
+                    (hourLabelWidth + 10 + eventWidth / 2) :
+                    (hourLabelWidth + 10 + eventWidth * 1.5),
+                y: top + max(height, 16) / 2
+            )
+            .onHover { isHovering in
+                handleHover(isHovering: isHovering, blk: blk, isLeftSide: isLeftSide, eventWidth: eventWidth, top: top)
+            }
+    }
+    
+    private func createSessionOverlay(blk: CalendarSessionBlock) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(blk.title)
+                .font(.system(size: 13, weight: blk.isCurrent ? .bold : .regular))
+                .foregroundColor(.white)
+                .lineLimit(2)
+            Text(timeSpan(blk))
+                .font(.caption2)
+                .foregroundColor(.white.opacity(0.75))
+        }
+        .padding(.leading, 6)
+        .padding(.top, 2)
+    }
+    
+    private func createRedLine() -> some View {
+        Rectangle()
+            .fill(Color.red)
+            .frame(width: (hourWidth - hourLabelWidth - 20) + 60, height: 2)
+            .position(
+                x: hourLabelWidth + 10 + ((hourWidth - hourLabelWidth - 20) + 60) / 2,
+                y: CGFloat(currentMinute) * (rowH / 60.0)
+            )
+    }
+    
+    private func tooltipOverlay() -> some View {
+        Group {
+            if let hoveredId = hoveredBlockId,
+               let hoveredBlock = sessionBlocks.first(where: { $0.id == hoveredId }) {
+                CalendarTooltip(
+                    title: hoveredBlock.title,
+                    timeSpan: timeSpan(hoveredBlock)
+                )
+                .position(tooltipPosition)
+                .zIndex(1000)
+                .animation(.easeInOut(duration: 0.15), value: hoveredBlockId)
+            }
+        }
+    }
+    
+    // MARK: - Event Handlers
+    
+    private func handleHover(isHovering: Bool, blk: CalendarSessionBlock, isLeftSide: Bool, eventWidth: CGFloat, top: CGFloat) {
+        if isHovering {
+            hoveredBlockId = blk.id
+            // Calculate tooltip position above the event
+            let x = isLeftSide ? 
+                (hourLabelWidth + 10 + eventWidth / 2) :
+                (hourLabelWidth + 10 + eventWidth * 1.5)
+            let y = top - 10 // Position above the event
+            tooltipPosition = CGPoint(x: x, y: y)
+        } else {
+            hoveredBlockId = nil
+        }
+    }
+
+    // MARK: - Helper Functions
+    
+    private func hourLabel(for h24: Int) -> String {
+        let h12 = (h24 == 0 || h24 == 12) ? 12 : h24 % 12
+        return "\(h12)\(h24 < 12 ? "AM" : "PM")"
+    }
+    
+    private func minutesSince(_ a: Date, _ b: Date) -> Int {
+        max(0, Int(b.timeIntervalSince(a) / 60))
+    }
+    
+    private func blockForHour(_ blk: CalendarSessionBlock, hour: Int) -> Bool {
+        let cal = Calendar.current
+        let startHour = cal.component(.hour, from: blk.start)
+        let endHour = cal.component(.hour, from: blk.end)
+        if endHour < startHour {
+            return hour >= startHour || hour <= endHour
+        }
+        return hour >= startHour && hour <= endHour
+    }
+    
+    private func rect(for blk: CalendarSessionBlock, relativeTo hour: Int) -> (CGFloat, CGFloat) {
+        let cal = Calendar.current
+        let startMin = (cal.component(.hour, from: blk.start) == hour) ? cal.component(.minute, from: blk.start) : 0
+        let endMin = (cal.component(.hour, from: blk.end) == hour) ? cal.component(.minute, from: blk.end) : 60
+        let top = CGFloat(startMin) * (rowH / 60.0)
+        let height = CGFloat(endMin - startMin) * (rowH / 60.0)
+        return (top, max(height, 6))
+    }
+    
+    private func timeSpan(_ blk: CalendarSessionBlock) -> String {
+        let f = DateFormatter(); f.dateFormat = "h:mm a"
+        return "\(f.string(from: blk.start)) – \(f.string(from: blk.end))"
+    }
+}
+
+
+================================================================================
+
+File: SettingsView.swift
+================================================================================
+//
+//  SettingsView.swift
+//  FocusIsland
+//
+//  Created by UT Austin on 8/4/25.
+//
+
+import SwiftUI
+
+/// Notch-style overlay for editing FocusSettings.
+struct SettingsView: View {
+    @ObservedObject var settings: FocusSettings
+    @Binding var mode: ExpandedViewMode
+    
+    // Local state to prevent excessive updates
+    @State private var localFocusMinutes: Int = 20
+    @State private var localBreakMinutes: Int = 10
+    @State private var localScalingFactor: String = "0.17"
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 24) {
+            HStack {
+                Text("Focus Settings")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(.white)
+                Spacer()
+                Button("Done") {
+                    saveSettings()
+                    mode = .normal
+                }
+                .buttonStyle(.borderedProminent)
+            }
+
+            settingRow(title: "Focus Session Length",
+                       value: $localFocusMinutes,
+                       range: 5...90,
+                       suffix: "min")
+
+            settingRow(title: "Standard Break Length",
+                       value: $localBreakMinutes,
+                       range: 5...60,
+                       suffix: "min")
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Post-Goal Break Scaling Factor")
+                    .foregroundColor(.white)
+                    .font(.system(size: 16))
+                
+                HStack(spacing: 12) {
+                    Button("-") {
+                        adjustScalingFactor(by: -0.05)
+                    }
+                    .buttonStyle(.bordered)
+                    .frame(width: 32, height: 28)
+                    
+                    TextField("Factor", text: $localScalingFactor)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(width: 80)
+                        .onSubmit {
+                            validateScalingFactor()
+                        }
+                    
+                    Button("+") {
+                        adjustScalingFactor(by: 0.05)
+                    }
+                    .buttonStyle(.bordered)
+                    .frame(width: 32, height: 28)
+                    
+                    Text("(0.05 - 0.50)")
+                        .foregroundColor(.gray)
+                        .font(.caption)
+                }
+            }
+
+            Spacer()
+        }
+        .padding(40)
+        .frame(minWidth: 420, maxWidth: 520, minHeight: 240)
+        .background(
+            RoundedRectangle(cornerRadius: 32, style: .continuous)
+                .fill(Color(.sRGB, white: 0.12, opacity: 0.97))
+        )
+        .onAppear {
+            loadCurrentSettings()
+        }
+    }
+
+    @ViewBuilder
+    private func settingRow(title: String,
+                            value: Binding<Int>,
+                            range: ClosedRange<Int>,
+                            suffix: String) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .foregroundColor(.white)
+                .font(.system(size: 16))
+            
+            HStack(spacing: 12) {
+                Button("-") {
+                    if value.wrappedValue > range.lowerBound {
+                        value.wrappedValue -= 1
+                    }
+                }
+                .buttonStyle(.bordered)
+                .frame(width: 32, height: 28)
+                
+                Text("\(value.wrappedValue) \(suffix)")
+                    .foregroundColor(.orange)
+                    .font(.system(size: 16, weight: .medium))
+                    .frame(width: 80, alignment: .center)
+                
+                Button("+") {
+                    if value.wrappedValue < range.upperBound {
+                        value.wrappedValue += 1
+                    }
+                }
+                .buttonStyle(.bordered)
+                .frame(width: 32, height: 28)
+            }
+        }
+    }
+    
+    // MARK: - Helper functions
+    private func loadCurrentSettings() {
+        localFocusMinutes = settings.focusMinutes
+        localBreakMinutes = settings.standardBreakMinutes
+        localScalingFactor = String(format: "%.2f", settings.scalingFactor)
+    }
+    
+    private func saveSettings() {
+        settings.focusMinutes = localFocusMinutes
+        settings.standardBreakMinutes = localBreakMinutes
+        settings.scalingFactor = Double(localScalingFactor) ?? 0.17
+    }
+    
+    private func adjustScalingFactor(by amount: Double) {
+        let currentValue = Double(localScalingFactor) ?? 0.17
+        let newValue = max(0.05, min(0.50, currentValue + amount))
+        localScalingFactor = String(format: "%.2f", newValue)
+    }
+    
+    private func validateScalingFactor() {
+        let value = Double(localScalingFactor) ?? 0.17
+        let clampedValue = max(0.05, min(0.50, value))
+        localScalingFactor = String(format: "%.2f", clampedValue)
+    }
+}
+
+
+================================================================================
+
+File: CalendarModels.swift
+================================================================================
+//
+//  CalendarModels.swift
+//  FocusIsland
+//
+//  Created by UT Austin on 8/6/25.
+//
+
+import SwiftUI
+
+// MARK: - Calendar Data Models
+
+struct CalendarSessionBlock: Identifiable {
+    let id = UUID()
+    let title: String
+    let start: Date
+    let end: Date
+    let isCurrent: Bool
+    let color: Color
+}
+
+// MARK: - Helper Functions
+
+func makeCalendarSessionBlocks(state: FocusIslandState,
+                               timerModel: TimerModel) -> [CalendarSessionBlock] {
+    let now = Date()
+    let anchor: Date = {
+        guard let cur = state.currentSession else { return now }
+        let elapsed = cur.length - timerModel.secondsRemaining
+        return now.addingTimeInterval(-TimeInterval(elapsed))
+    }()
+
+    var blocks: [CalendarSessionBlock] = []
+    var cursor = anchor
+
+    for (idx, session) in state.sessions[state.currentSessionIndex...].enumerated() {
+        let end = cursor.addingTimeInterval(TimeInterval(session.length))
+        if end < anchor { cursor = end; continue }
+        if cursor >= anchor.addingTimeInterval(12 * 3600) { break }
+
+        blocks.append(
+            CalendarSessionBlock(
+                title: session.title,
+                start: cursor,
+                end: end,
+                isCurrent: idx == 0,
+                color: session.title.lowercased().contains("break")
+                       ? Color.blue.opacity(0.38)
+                       : (idx == 0 ? Color.orange.opacity(0.75)
+                                   : Color.blue.opacity(0.82))
+            )
+        )
+        cursor = end
+    }
+    return blocks
+}
+
+
+================================================================================
+
+File: FocusIsland.entitlements
+================================================================================
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>com.apple.security.app-sandbox</key>
+	<true/>
+	<key>com.apple.security.files.user-selected.read-only</key>
+	<true/>
+</dict>
+</plist>
+
+
+================================================================================
+
+File: Goal.swift
+================================================================================
+//
+//  Goal.swift
+//  FocusIsland
+//
+//  Created by UT Austin on 8/3/25.
+//
+
+
+//
+//  Goal.swift
+//  FocusIsland
+//
+//  Created by UT Austin on 8/4/25.
+//
+
+import Foundation
+
+/// A high-level work item entered by the user.
+struct Goal: Identifiable, Equatable, Codable {
+    let id: UUID
+    var title: String
+    /// Estimated duration in **minutes**.
+    var minutes: Int
+
+    init(title: String, minutes: Int) {
+        self.id     = UUID()
+        self.title  = title
+        self.minutes = minutes
+    }
+}
+
+
+================================================================================
+
+File: SessionCalendarView.swift
+================================================================================
+//
+//  SessionCalendarView.swift
+//  FocusIsland
+//
+//  Inspired by Apple Calendar Day View (12-hour version)
+//
+
+import SwiftUI
+
+struct SessionBlock: Identifiable {
+    let id = UUID()
+    let title: String
+    let start: Date
+    let end: Date
+    let isCurrent: Bool
+    let color: Color
+}
+
+struct SessionCalendarView: View {
+    let sessionBlocks: [SessionBlock]
+    let referenceTime: Date   // Use Date() when ticking, or frozen time if paused
+
+    private let hourHeight: CGFloat = 64 // px per hour
+
+    var body: some View {
+        ScrollView(showsIndicators: true) {
+            ZStack(alignment: .top) {
+                // Hour grid lines and labels
+                ForEach(0..<13) { hourOffset in
+                    let hour = Calendar.current.component(.hour, from: referenceTime) + hourOffset
+                    let y = CGFloat(hourOffset) * hourHeight
+                    HStack(spacing: 0) {
+                        Text(label(for: hour % 24))
+                            .frame(width: 38, alignment: .trailing)
+                            .font(.caption2)
+                            .foregroundColor(.gray)
+                            .opacity(0.95)
+                        Rectangle().frame(height: 1)
+                            .foregroundColor(Color.white.opacity(0.09))
+                        Spacer()
+                    }
+                    .offset(y: y)
+                }
+
+                // Session blocks
+                ForEach(sessionBlocks) { block in
+                    let (top, height) = blockRect(block: block)
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(block.color)
+                        .frame(width: 168, height: max(height, 16))
+                        .overlay(
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(block.title)
+                                    .fontWeight(block.isCurrent ? .bold : .medium)
+                                    .foregroundColor(.white)
+                                    .lineLimit(1)
+                                    .font(.system(size: 14))
+                                Text(timeSpanString(start: block.start, end: block.end))
+                                    .font(.caption2).foregroundColor(.white.opacity(0.75))
+                            }.padding(.leading, 8).padding(.vertical, 3),
+                            alignment: .topLeading
+                        )
+                        .offset(x: 44, y: top)
+                        .shadow(color: Color.black.opacity(0.08), radius: 2, x: 1, y: 2)
+                }
+
+                // Current time line
+                let nowY = CGFloat(minutesSince(referenceTime, from: referenceTime)) / 60.0 * hourHeight
+                Rectangle()
+                    .fill(Color.red.opacity(0.93))
+                    .frame(height: 2)
+                    .offset(x: 40, y: nowY-1)
+            }
+            .frame(height: hourHeight * 12)
+        }
+        .frame(minWidth: 250, maxWidth: 250)
+        .background(Color(.sRGB, white: 0.14, opacity: 0.96))
+        .cornerRadius(18)
+    }
+
+    // MARK: - Geometry
+
+    private func label(for hour: Int) -> String {
+        let hour12 = (hour == 0 || hour == 12) ? 12 : hour % 12
+        let ampm = hour < 12 || hour == 24 ? "AM" : "PM"
+        return "\(hour12)\(ampm)"
+    }
+
+    // offset from referenceTime, in minutes
+    private func minutesSince(_ time: Date, from: Date) -> Int {
+        let delta = time.timeIntervalSince(from)
+        return max(0, Int(delta/60))
+    }
+    // Returns (top, height) in px for block in the 12h window starting at referenceTime
+    private func blockRect(block: SessionBlock) -> (CGFloat, CGFloat) {
+        let startMins = Double(minutesSince(block.start, from: referenceTime))
+        let endMins   = Double(minutesSince(block.end, from: referenceTime))
+        let minY = max(0.0, min(startMins/60.0 * hourHeight, hourHeight*12))
+        let maxY = min(max(endMins/60.0 * hourHeight, minY), hourHeight*12)
+        let blockHeight = maxY - minY
+        return (minY, blockHeight)
+    }
+
+    private func timeSpanString(start: Date, end: Date) -> String {
+        let fmt = DateFormatter()
+        fmt.dateFormat = "h:mm a"
+        return "\(fmt.string(from: start)) – \(fmt.string(from: end))"
+    }
+}
+
+
+================================================================================
+
+File: SessionGenerator.swift
+================================================================================
+//
+//  SessionGenerator.swift
+//  FocusIsland
+//
+//  Created by UT Austin on 8/3/25.
+//
+
+
+//
+//  SessionGenerator.swift
+//  FocusIsland
+//
+//  Created by UT Austin on 8/4/25.
+//
+
+import Foundation
+
+/// Pure-function helper that converts Goals → FocusSessions using current settings.
+enum SessionGenerator {
+    static func build(from goals: [Goal],
+                      settings: FocusSettings) -> [FocusSession] {
+
+        var sessions: [FocusSession] = []
+
+        for goal in goals {
+            var remaining = goal.minutes
+            var chunkIdx  = 1
+            // Break goal into focus chunks
+            while remaining > 0 {
+                let chunk = min(remaining, settings.focusMinutes)
+                sessions.append(
+                    FocusSession(title: "\(goal.title), Session \(chunkIdx)",
+                                 length: chunk * 60) // store in seconds
+                )
+                remaining -= chunk
+                chunkIdx  += 1
+
+                if remaining > 0 {
+                    // Standard break between focus chunks
+                    sessions.append(
+                        FocusSession(title: "Break",
+                                     length: settings.standardBreakMinutes * 60)
+                    )
+                }
+            }
+
+            // Post-goal break
+            let extra = Int(ceil(Double(goal.minutes) * settings.scalingFactor))
+            let post  = settings.standardBreakMinutes + extra
+            sessions.append(
+                FocusSession(title: "Break",
+                             length: post * 60)
+            )
+        }
+        return sessions
+    }
+}
+
+
+================================================================================
+
+File: FocusIslandApp.swift
+================================================================================
+//
+//  FocusIslandApp.swift
+//  FocusIsland
+//
+//  Created by UT Austin on 8/2/25.
+//
+
+import SwiftUI
+import DynamicNotchKit
+
+@main
+struct FocusIslandApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    var body: some Scene { Settings { EmptyView() } }
+}
+
+final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
+
+    // MARK: — Status Bar
+    var statusBarItem: NSStatusItem!
+    
+    // MARK: — Core singleton models
+    let settings  = FocusSettings.load()
+    lazy var state: FocusIslandState = {
+        FocusIslandState(
+            goals: [
+                Goal(title: "Homework 1",     minutes: 60),
+                Goal(title: "Coding Project", minutes: 30),
+                Goal(title: "Resume Fixing",  minutes: 20)
+            ],
+            settings: settings
+        )
+    }()
+    let timerModel = TimerModel(sessionDuration: 1)
+
+    // MARK: — UI (Dynamic Notch)
+    var notch: DynamicNotch<ExpandedNotchView,
+                            CompactSessionView,
+                            CompactTimerView>?
+
+    // MARK: — App State
+    @Published var isNotchHidden = false
+
+    // MARK: — Messages
+    private let congrats = [
+        "Section complete!", "Nice work!", "Well done!",
+        "Keep it up!", "Great focus!", "Finished!", "Good job!"
+    ]
+    private let finals = [
+        "All sessions complete!", "Great work today!",
+        "You did it!", "Sessions finished!",
+        "Well done!", "All done!"
+    ]
+
+    // MARK: — Launch
+    func applicationDidFinishLaunching(_ n: Notification) {
+        // Set the app activation policy to prevent dock appearance
+        NSApp.setActivationPolicy(.accessory)
+        
+        // Setup status bar
+        setupStatusBar()
+        
+        // Setup notch
+        loadCurrentSession()
+        notch = DynamicNotch(
+            hoverBehavior: .all,
+            style: .notch,
+            expanded: { ExpandedNotchView(state: self.state,
+                                          timerModel: self.timerModel,
+                                          appDelegate: self) },
+            compactLeading: { CompactSessionView(state: self.state) },
+            compactTrailing: { CompactTimerView(timerModel: self.timerModel) }
+        )
+        Task { await notch?.compact() }
+    }
+    
+    // Prevent app from quitting when all windows are closed
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        return false
+    }
+    
+    // MARK: — Status Bar Setup
+    private func setupStatusBar() {
+        statusBarItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        
+        if let button = statusBarItem.button {
+            button.image = NSImage(systemSymbolName: "circle.fill", accessibilityDescription: "FocusIsland")
+            button.imageScaling = .scaleProportionallyUpOrDown
+        }
+        
+        let menu = NSMenu()
+        
+        // Show/Hide Dynamic Island
+        let toggleItem = NSMenuItem(
+            title: isNotchHidden ? "Show Focus Island" : "Hide Focus Island",
+            action: #selector(toggleNotchVisibility),
+            keyEquivalent: "h"
+        )
+        toggleItem.target = self
+        menu.addItem(toggleItem)
+        
+        menu.addItem(NSMenuItem.separator())
+        
+        // Current session info
+        if let session = state.currentSession {
+            let sessionItem = NSMenuItem(title: "Current: \(session.title)", action: nil, keyEquivalent: "")
+            sessionItem.isEnabled = false
+            menu.addItem(sessionItem)
+            
+            let timerItem = NSMenuItem(title: "Time: \(timerModel.timeDisplay)", action: nil, keyEquivalent: "")
+            timerItem.isEnabled = false
+            menu.addItem(timerItem)
+            
+            menu.addItem(NSMenuItem.separator())
+        }
+        
+        // Pause/Resume
+        let playPauseItem = NSMenuItem(
+            title: timerModel.isRunning ? "Pause Timer" : "Resume Timer",
+            action: #selector(toggleTimer),
+            keyEquivalent: "p"
+        )
+        playPauseItem.target = self
+        menu.addItem(playPauseItem)
+        
+        menu.addItem(NSMenuItem.separator())
+        
+        // Quit
+        let quitItem = NSMenuItem(title: "Quit FocusIsland", action: #selector(quitApp), keyEquivalent: "q")
+        quitItem.target = self
+        menu.addItem(quitItem)
+        
+        statusBarItem.menu = menu
+        
+        // Update menu periodically
+        Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
+            self.updateStatusBarMenu()
+        }
+    }
+    
+    // MARK: — Status Bar Actions
+    @objc func toggleNotchVisibility() {
+        isNotchHidden.toggle()
+        
+        if isNotchHidden {
+            Task { await notch?.hide() }
+        } else {
+            Task { await notch?.compact() }
+        }
+        
+        updateStatusBarMenu()
+    }
+    
+    @objc private func toggleTimer() {
+        if timerModel.isRunning {
+            timerModel.pause()
+        } else {
+            timerModel.start()
+        }
+    }
+    
+    @objc private func quitApp() {
+        NSApplication.shared.terminate(nil)
+    }
+    
+    private func updateStatusBarMenu() {
+        guard let menu = statusBarItem.menu else { return }
+        
+        // Update toggle item
+        if let toggleItem = menu.item(at: 0) {
+            toggleItem.title = isNotchHidden ? "Show Focus Island" : "Hide Focus Island"
+        }
+        
+        // Update current session info (rebuild the relevant menu items)
+        // Remove old session items (items 2, 3, 4 if they exist)
+        while menu.numberOfItems > 6 {
+            menu.removeItem(at: 2)
+        }
+        
+        if let session = state.currentSession {
+            let sessionItem = NSMenuItem(title: "Current: \(session.title)", action: nil, keyEquivalent: "")
+            sessionItem.isEnabled = false
+            menu.insertItem(sessionItem, at: 2)
+            
+            let timerItem = NSMenuItem(title: "Time: \(timerModel.timeDisplay)", action: nil, keyEquivalent: "")
+            timerItem.isEnabled = false
+            menu.insertItem(timerItem, at: 3)
+            
+            menu.insertItem(NSMenuItem.separator(), at: 4)
+        }
+        
+        // Update play/pause item
+        if let playPauseItem = menu.items.first(where: { $0.action == #selector(toggleTimer) }) {
+            playPauseItem.title = timerModel.isRunning ? "Pause Timer" : "Resume Timer"
+        }
+    }
+
+    // MARK: — Session lifecycle
+    func loadCurrentSession() {
+        timerModel.pause()
+        timerModel.onCompletion = nil
+
+        guard let session = state.currentSession else {
+            timerModel.reset(to: 0)
+            return
+        }
+        timerModel.reset(to: session.length)
+        timerModel.onCompletion = { [weak self] in self?.handleCompletion() }
+    }
+
+    private func handleCompletion() {
+        state.markSessionComplete()
+
+        // Decide message
+        state.notificationMessage = state.currentSession == nil
+            ? finals.randomElement()!
+            : congrats.randomElement()!
+        state.showNotification = true
+        
+        // Always show notch for completion notifications
+        if isNotchHidden {
+            isNotchHidden = false
+        }
+        
+        Task { await notch?.expand() }
+    }
+
+    func notificationDismissed() {
+        if state.currentSession == nil {
+            timerModel.reset(to: 0)
+            timerModel.onCompletion = nil
+        } else {
+            loadCurrentSession()
+        }
+    }
+}
+
+
+================================================================================
+
+File: TimerModel.swift
 ================================================================================
 
 
@@ -415,21 +2109,12 @@ import SwiftUI
 struct ExpandedNotchView: View {
     @ObservedObject var state: FocusIslandState
     @ObservedObject var timerModel: TimerModel
+    let appDelegate: AppDelegate
 
-    // Editing state for Add/Edit
-    @State private var editingSessionID: UUID? = nil
-    @State private var newTitle: String = ""
-    @State private var editHour: String = "0"
-    @State private var editMin: String = "0"
-    @State private var editSec: String = "0"
-    @State private var newLength: String = "" // compatibility
-
-    // Notification <-> main overlay animation
     @State private var showingMainOverlay = false
 
     private let maxOverlayWidth: CGFloat = 1000
     private let minOverlayWidth: CGFloat = 540
-    private let maxUpcomingToShow: Int = 5
 
     var body: some View {
         ZStack {
@@ -437,29 +2122,26 @@ struct ExpandedNotchView: View {
                 NotificationView(
                     message: state.notificationMessage,
                     onHover: {
+                        appDelegate.notificationDismissed()
                         withAnimation(.easeInOut(duration: 0.33)) {
                             showingMainOverlay = true
                             state.showNotification = false
-                        }
-                        // Only signal AppDelegate to load the next session/timer after notification overlay dismisses.
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.34) {
-                            if let app = NSApplication.shared.delegate as? AppDelegate {
-                                app.loadCurrentSession()
-                            }
                         }
                     }
                 )
                 .frame(minWidth: 370, maxWidth: 470, minHeight: 120, maxHeight: 155)
                 .transition(.scale.combined(with: .opacity))
             }
-            // Show full overlay if not showing notification, or after animated transition
+
             if !state.showNotification || showingMainOverlay {
                 mainExpandedContent
                     .transition(.scale.combined(with: .opacity))
             }
         }
-        .onChange(of: state.showNotification) { show in
-            if show { showingMainOverlay = false }
+        .onChange(of: state.showNotification) { _, show in
+            if show {
+                showingMainOverlay = false
+            }
         }
         .animation(.easeInOut(duration: 0.33), value: showingMainOverlay)
     }
@@ -467,344 +2149,297 @@ struct ExpandedNotchView: View {
     private var mainExpandedContent: some View {
         Group {
             switch state.expandedViewMode {
-            case .editSessions:
-                EditSessionsView(
-                    state: state,
-                    editingSessionID: $editingSessionID,
-                    newTitle: $newTitle,
-                    editHour: $editHour,
-                    editMin: $editMin,
-                    editSec: $editSec,
-                    newLength: $newLength
-                )
+            case .editGoals:
+                EditGoalsView(state: state)
+            case .settings:
+                SettingsView(settings: state.settings, mode: $state.expandedViewMode)
             case .normal:
-                let session = state.currentSession ?? FocusSession(title: "--", length: 1)
-                HStack(alignment: .top, spacing: 0) {
-                    // LEFT: Current session details
-                    VStack(alignment: .center, spacing: 14) {
-                        HStack(spacing: 8) {
-                            Image(systemName: "checkmark.seal.fill")
-                                .foregroundColor(.blue)
-                                .font(.system(size: 24, weight: .bold))
-                            Text(session.title)
-                                .font(.system(size: 18, weight: .bold))
-                                .foregroundColor(.white)
-                                .lineLimit(1)
-                                .truncationMode(.tail)
-                                .layoutPriority(1)
-                        }
-                        .padding(.horizontal, 8)
-                        .frame(minWidth: 60, maxWidth: .infinity, alignment: .center)
-                        Text("Current session in progress…")
-                            .foregroundColor(.white.opacity(0.7))
-                            .font(.footnote)
-                    }
-                    .frame(minWidth: 110, alignment: .center)
-
-                    Divider()
-                        .frame(width: 1)
-                        .background(.white.opacity(0.12))
-                        .padding(.vertical, 10)
-
-                    // CENTER: Timeline, capped + more indicator
-                    VStack(alignment: .leading, spacing: 12) {
-                        HStack {
-                            Text("Upcoming Timeline")
-                                .font(.caption)
-                                .foregroundColor(.gray)
-                            Spacer()
-                            Button {
-                                state.expandedViewMode = .editSessions
-                            } label: {
-                                Image(systemName: "pencil.circle.fill")
-                                    .foregroundColor(.orange)
-                                    .font(.title3)
-                            }
-                            .buttonStyle(.plain)
-                            .help("Edit sessions")
-                        }
-                        ForEach(
-                            Array(state.sessionsToShow.prefix(maxUpcomingToShow).enumerated()),
-                            id: \.element.id
-                        ) { idx, s in
-                            HStack {
-                                Text(s.title)
-                                    .foregroundColor(.white)
-                                    .fontWeight(idx == 0 ? .bold : .regular)
-                                Spacer()
-                                Text(formattedLength(s.length))
-                                    .foregroundColor(.orange)
-                                    .font(.caption2.monospacedDigit())
-                            }
-                        }
-                        if state.sessionsToShow.count > maxUpcomingToShow {
-                            let remaining = state.sessionsToShow.count - maxUpcomingToShow
-                            HStack {
-                                Image(systemName: "ellipsis")
-                                    .foregroundColor(.gray)
-                                Text("and \(remaining) more…")
-                                    .foregroundColor(.gray)
-                                    .font(.caption)
-                                    .lineLimit(1)
-                                Spacer()
-                            }
-                            .opacity(0.7)
-                        }
-                        Spacer(minLength: 10)
-                    }
-                    .frame(minWidth: 180, maxWidth: 270, alignment: .leading)
-                    .padding(.horizontal, 20)
-
-                    Divider()
-                        .frame(width: 1)
-                        .background(.white.opacity(0.12))
-                        .padding(.vertical, 10)
-
-                    // RIGHT: Timer + start/pause
-                    VStack(alignment: .center, spacing: 14) {
-                        Text(timerModel.timeDisplay)
-                            .font(.system(size: 27, weight: .bold).monospacedDigit())
+                normalModeContent
+            }
+        }
+    }
+    
+    private var normalModeContent: some View {
+        HStack(alignment: .top, spacing: 0) {
+            // Calendar (center)
+            VStack(alignment: .leading, spacing: 20) {
+                // Header with buttons - ADDED MINIMIZE BUTTON
+                HStack {
+                    Text("Upcoming Timeline")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                    Spacer()
+                    
+                    // NEW: Minimize button
+                    Button {
+                        appDelegate.toggleNotchVisibility()
+                    } label: {
+                        Image(systemName: "minus.circle.fill")
                             .foregroundColor(.orange)
-                        ZStack {
-                            Circle()
-                                .stroke(Color.gray.opacity(0.5), lineWidth: 6)
-                                .frame(width: 48, height: 48)
-                            Circle()
-                                .trim(from: 0, to: timerModel.progress)
-                                .stroke(Color.orange, style: StrokeStyle(lineWidth: 6, lineCap: .round))
-                                .rotationEffect(.degrees(-90))
-                                .frame(width: 48, height: 48)
-                            Button(action: {
-                                timerModel.isRunning ? timerModel.pause() : timerModel.start()
-                            }) {
-                                Image(systemName: timerModel.isRunning ? "pause.fill" : "play.fill")
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(width: 24, height: 24)
-                                    .foregroundColor(.orange)
-                                    .padding(8)
-                                    .offset(x: timerModel.isRunning ? 0 : 2)
-                            }
-                            .buttonStyle(.plain)
-                        }
-                        Text(timerModel.isRunning ? "Pause Session" : "Resume Session")
-                            .font(.footnote)
-                            .foregroundColor(.white.opacity(0.76))
+                            .font(.title3)
                     }
-                    .frame(minWidth: 120, maxWidth: 150)
+                    .buttonStyle(.plain)
+                    .help("Hide Focus Island")
+                    
+                    Button {
+                        state.expandedViewMode = .editGoals
+                    } label: {
+                        Image(systemName: "pencil.circle.fill")
+                            .foregroundColor(.orange)
+                            .font(.title3)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Edit goals")
+                    
+                    Button {
+                        state.expandedViewMode = .settings
+                    } label: {
+                        Image(systemName: "gearshape.fill")
+                            .foregroundColor(.orange)
+                            .font(.title3)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.leading, 4)
+                    .help("Settings")
                 }
-                .padding(.vertical, 20)
-                .padding(.horizontal, 24)
-                .fixedSize(horizontal: true, vertical: false)
-                .frame(
-                    minWidth: minOverlayWidth,
-                    maxWidth: maxOverlayWidth
+                
+                // Calendar itself
+                CalendarViewForSessions(
+                    sessionBlocks: makeCalendarSessionBlocks(state: state, timerModel: timerModel),
+                    referenceTime: Date()
                 )
             }
-        }
-    }
+            .frame(minWidth: 295, maxWidth: 400, alignment: .topLeading)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
 
-    private func formattedLength(_ seconds: Int) -> String {
-        let h = seconds / 3600
-        let m = (seconds % 3600) / 60
-        let s = seconds % 60
-        if h > 0 {
-            return String(format: "%d:%02d:%02d", h, m, s)
-        } else {
-            return String(format: "%d:%02d", m, s)
-        }
-    }
-}
+            Divider()
+                .frame(width: 1)
+                .background(.white.opacity(0.12))
+                .padding(.vertical, 10)
 
-// --- EDIT SESSIONS PAGE --- //
-struct EditSessionsView: View {
-    @ObservedObject var state: FocusIslandState
-    @Binding var editingSessionID: UUID?
-    @Binding var newTitle: String
-    @Binding var editHour: String
-    @Binding var editMin: String
-    @Binding var editSec: String
-    @Binding var newLength: String // unused
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Text("Edit Sessions")
-                    .font(.system(size: 20, weight: .bold))
-                    .foregroundColor(.white)
-                Spacer()
-                Button("Done") {
-                    state.expandedViewMode = .normal
-                }
-                .font(.system(size: 15, weight: .bold))
-                .buttonStyle(.borderedProminent)
-                .padding(.trailing, 2)
-            }
-            .padding(.bottom, 8)
-
-            ScrollView {
-                VStack(spacing: 15) {
-                    ForEach(state.sessions, id: \.id) { s in
-                        HStack(spacing: 44) {
-                            if editingSessionID == s.id {
-                                TextField("Title", text: $newTitle)
-                                    .font(.system(size: 16))
-                                    .textFieldStyle(.roundedBorder)
-                                    .frame(minWidth: 120, maxWidth: 220)
-                                HStack(spacing: 7) {
-                                    TextField("Hr", text: $editHour)
-                                        .font(.system(size: 15))
-                                        .frame(width: 35)
-                                        .textFieldStyle(.roundedBorder)
-                                    Text(":")
-                                        .font(.system(size: 15, weight: .bold))
-                                        .foregroundColor(.gray)
-                                    TextField("Min", text: $editMin)
-                                        .font(.system(size: 15))
-                                        .frame(width: 35)
-                                        .textFieldStyle(.roundedBorder)
-                                    Text(":")
-                                        .font(.system(size: 15, weight: .bold))
-                                        .foregroundColor(.gray)
-                                    TextField("Sec", text: $editSec)
-                                        .font(.system(size: 15))
-                                        .frame(width: 35)
-                                        .textFieldStyle(.roundedBorder)
-                                }
-                                Button("Save") {
-                                    let hour = Int(editHour) ?? 0
-                                    let min = Int(editMin) ?? 0
-                                    let sec = Int(editSec) ?? 0
-                                    let totalSec = hour * 3600 + min * 60 + sec
-                                    if !newTitle.isEmpty, totalSec > 0 {
-                                        state.updateSession(id: s.id, title: newTitle, length: totalSec)
-                                        editingSessionID = nil
-                                    }
-                                }
-                                .font(.system(size: 15, weight: .bold))
-                                .buttonStyle(.borderedProminent)
-                                Button("Cancel") {
-                                    editingSessionID = nil
-                                }
-                                .font(.system(size: 14, weight: .regular))
-                                .buttonStyle(.bordered)
-                            } else {
-                                Text(s.title)
-                                    .font(.system(size: 16))
-                                    .foregroundColor(.white)
-                                    .lineLimit(1)
-                                    .truncationMode(.tail)
-                                    .frame(minWidth: 120, maxWidth: 220, alignment: .leading)
-                                Text(formattedHourMinSec(s.length))
-                                    .font(.system(size: 15, design: .monospaced))
-                                    .foregroundColor(.orange)
-                                    .frame(width: 70, alignment: .leading)
-                                Button {
-                                    newTitle = s.title
-                                    let (h, m, sec) = secondsToHMS(s.length)
-                                    editHour = "\(h)"
-                                    editMin = "\(m)"
-                                    editSec = "\(sec)"
-                                    editingSessionID = s.id
-                                } label: {
-                                    Image(systemName: "pencil")
-                                        .font(.system(size: 17))
-                                }
-                                .buttonStyle(.plain)
-                                .help("Edit session")
-                                Button {
-                                    state.removeSession(id: s.id)
-                                } label: {
-                                    Image(systemName: "trash")
-                                        .font(.system(size: 17))
-                                        .foregroundColor(.red)
-                                }
-                                .buttonStyle(.plain)
-                                .help("Delete session")
-                            }
-                        }
-                        .padding(.vertical, 6)
-                    }
-                    if editingSessionID == nil {
-                        HStack(spacing: 44) {
-                            TextField("Title", text: $newTitle)
-                                .font(.system(size: 16))
-                                .textFieldStyle(.roundedBorder)
-                                .frame(minWidth: 120, maxWidth: 220)
-                            HStack(spacing: 7) {
-                                TextField("Hr", text: $editHour)
-                                    .font(.system(size: 15))
-                                    .frame(width: 35)
-                                    .textFieldStyle(.roundedBorder)
-                                Text(":")
-                                    .font(.system(size: 15, weight: .bold))
-                                    .foregroundColor(.gray)
-                                TextField("Min", text: $editMin)
-                                    .font(.system(size: 15))
-                                    .frame(width: 35)
-                                    .textFieldStyle(.roundedBorder)
-                                Text(":")
-                                    .font(.system(size: 15, weight: .bold))
-                                    .foregroundColor(.gray)
-                                TextField("Sec", text: $editSec)
-                                    .font(.system(size: 15))
-                                    .frame(width: 35)
-                                    .textFieldStyle(.roundedBorder)
-                            }
-                            Button("Add") {
-                                let hour = Int(editHour) ?? 0
-                                let min = Int(editMin) ?? 0
-                                let sec = Int(editSec) ?? 0
-                                let totalSec = hour * 3600 + min * 60 + sec
-                                if !newTitle.isEmpty, totalSec > 0 {
-                                    state.addSession(title: newTitle, length: totalSec)
-                                    newTitle = ""
-                                    editHour = "0"
-                                    editMin = "0"
-                                    editSec = "0"
-                                }
-                            }
-                            .font(.system(size: 15, weight: .bold))
-                            .buttonStyle(.borderedProminent)
-                        }
-                        .padding(.vertical, 6)
-                    }
-                }
-            }
-            .frame(maxHeight: 400)
-            Spacer()
+            // Timer + controls (right)
+            timerControlsSection
         }
         .padding(.vertical, 20)
-        .padding(.horizontal, 60)
+        .padding(.horizontal, 24)
         .fixedSize(horizontal: true, vertical: false)
-        .frame(
-            minWidth: 620, maxWidth: 900
-        )
-        .transition(.scale.combined(with: .opacity))
+        .frame(minWidth: minOverlayWidth, maxWidth: maxOverlayWidth)
     }
-
-    private func formattedHourMinSec(_ seconds: Int) -> String {
-        let h = seconds / 3600
-        let m = (seconds % 3600) / 60
-        let s = seconds % 60
-        if h > 0 {
-            return String(format: "%d:%02d:%02d", h, m, s)
+    
+    private var timerControlsSection: some View {
+        VStack(alignment: .center, spacing: 14) {
+            Text(timerModel.timeDisplay)
+                .font(.system(size: 27, weight: .bold).monospacedDigit())
+                .foregroundColor(.orange)
+            
+            ZStack {
+                Circle()
+                    .stroke(Color.gray.opacity(0.5), lineWidth: 6)
+                    .frame(width: 48, height: 48)
+                Circle()
+                    .trim(from: 0, to: timerModel.progress)
+                    .stroke(Color.orange, style: StrokeStyle(lineWidth: 6, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+                    .frame(width: 48, height: 48)
+                Button(action: handleTimerButtonPress) {
+                    Image(systemName: timerModel.isRunning ? "pause.fill" : "play.fill")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 24, height: 24)
+                        .foregroundColor(.orange)
+                        .padding(8)
+                        .offset(x: timerModel.isRunning ? 0 : 2)
+                }
+                .buttonStyle(.plain)
+            }
+            
+            Text(timerModel.isRunning ? "Pause Session" : "Resume Session")
+                .font(.footnote)
+                .foregroundColor(.white.opacity(0.76))
+        }
+        .frame(minWidth: 120, maxWidth: 150)
+    }
+    
+    private func handleTimerButtonPress() {
+        if timerModel.secondsRemaining == 0 && !timerModel.isRunning {
+            appDelegate.loadCurrentSession()
+            return
+        }
+        
+        if timerModel.isRunning {
+            timerModel.pause()
         } else {
-            return String(format: "%d:%02d", m, s)
+            timerModel.start()
         }
     }
-    private func secondsToHMS(_ seconds: Int) -> (Int, Int, Int) {
-        let h = seconds / 3600
-        let m = (seconds % 3600) / 60
-        let s = seconds % 60
-        return (h, m, s)
+}
+
+
+================================================================================
+
+File: FocusIslandState.swift
+================================================================================
+//
+//  FocusIslandState.swift
+//  FocusIsland
+//
+//  Created by UT Austin on 8/3/25.
+//
+
+import Foundation
+import Combine
+
+enum ExpandedViewMode: Equatable {
+    case normal
+    case editGoals
+    case settings
+}
+
+/// Global app-wide state.
+///
+/// - Holds the user's goals
+/// - Generates `[FocusSession]` anytime goals / settings change
+/// - Drives the UI and timer logic exactly like before
+final class FocusIslandState: ObservableObject {
+
+    // MARK: — Input
+    @Published var goals: [Goal]
+    @Published var settings: FocusSettings
+
+    // MARK: — Output (generated)
+    @Published var sessions: [FocusSession] = []
+    @Published var currentSessionIndex: Int = 0
+
+    // MARK: — UI mode
+    @Published var expandedViewMode: ExpandedViewMode = .normal
+
+    // MARK: — Notification overlay
+    @Published var showNotification: Bool = false
+    @Published var notificationMessage: String = ""
+
+    // Optional weak reference to AppDelegate to reload timer on session changes
+    weak var appDelegate: AppDelegate?
+
+    private var cancellables: Set<AnyCancellable> = []
+
+    // MARK: — Init
+    init(goals: [Goal], settings: FocusSettings) {
+        self.goals    = goals
+        self.settings = settings
+        regenerateSessions()
+
+        // React to any goal change
+        $goals
+            .sink { [weak self] _ in
+                self?.regenerateSessions()
+            }
+            .store(in: &cancellables)
+
+        // React to any settings change
+        settings.objectWillChange
+            .sink { [weak self] _ in
+                self?.regenerateSessions()
+            }
+            .store(in: &cancellables)
+
+        // Save settings whenever they change
+        settings.objectWillChange
+            .sink { [weak settings] _ in
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    settings?.save()
+                }
+            }
+            .store(in: &cancellables)
+    }
+
+    // MARK: — Derived helpers
+    var sessionsToShow: [FocusSession] { sessions }
+    var currentSession: FocusSession? {
+        guard currentSessionIndex < sessions.count else { return nil }
+        return sessions[currentSessionIndex]
+    }
+
+    // MARK: — Mutations
+    func addGoal(title: String, minutes: Int) {
+        goals.append(Goal(title: title, minutes: minutes))
+    }
+
+    func removeGoal(id: UUID) {
+        goals.removeAll { $0.id == id }
+    }
+
+    func updateGoal(id: UUID, title: String, minutes: Int) {
+        guard let idx = goals.firstIndex(where: { $0.id == id }) else { return }
+        goals[idx].title   = title
+        goals[idx].minutes = minutes
+    }
+
+    func moveGoalUp(id: UUID) {
+        guard let idx = goals.firstIndex(where: { $0.id == id }), idx > 0 else { return }
+        goals.move(fromOffsets: IndexSet(integer: idx), toOffset: idx - 1)
+        currentSessionIndex = 0 // Reset session index to zero after reorder
+        regenerateSessions()
+    }
+
+    func moveGoalDown(id: UUID) {
+        guard let idx = goals.firstIndex(where: { $0.id == id }), idx < goals.count - 1 else { return }
+        goals.move(fromOffsets: IndexSet(integer: idx), toOffset: idx + 2)
+        currentSessionIndex = 0 // Reset session index
+        regenerateSessions()
+    }
+
+    func isFirst(_ goal: Goal) -> Bool {
+        goals.first?.id == goal.id
+    }
+
+    func isLast(_ goal: Goal) -> Bool {
+        goals.last?.id == goal.id
+    }
+
+    func markSessionComplete() {
+        guard currentSessionIndex < sessions.count else { return }
+        sessions.remove(at: currentSessionIndex)
+    }
+
+    // MARK: — Private
+    private func regenerateSessions() {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            self.sessions = SessionGenerator.build(from: self.goals, settings: self.settings)
+            self.currentSessionIndex = min(self.currentSessionIndex, max(0, self.sessions.count - 1))
+            // Immediately update timer model through appDelegate
+            self.appDelegate?.loadCurrentSession()
+        }
     }
 }
+
+
+================================================================================
+
+File: NotificationView.swift
+================================================================================
+//
+//  NotificationView.swift
+//  FocusIsland
+//
+//  Created by UT Austin on 8/6/25.
+//
+
+
+//
+//  NotificationView.swift
+//  FocusIsland
+//
+//  Created by UT Austin on 8/6/25.
+//
+
+import SwiftUI
 
 struct NotificationView: View {
     let message: String
     var onHover: (() -> Void)? = nil
-
+    
     var body: some View {
         HStack(spacing: 20) {
             ZStack {
@@ -831,7 +2466,7 @@ struct NotificationView: View {
             RoundedRectangle(cornerRadius: 30, style: .continuous)
                 .fill(Color(.sRGB, white: 0.11, opacity: 0.95))
         )
-        .shadow(color: Color.black.opacity(0.21), radius: 12, y: 4)
+        .shadow(color: Color.black.opacity(0.22), radius: 12, y: 4)
         .onHover { hovering in
             if hovering {
                 onHover?()
@@ -873,6 +2508,341 @@ struct CompactSessionView: View {
         .background(Color.clear)
     }
 }
+
+
+================================================================================
+
+File: FocusSettings.swift
+================================================================================
+//
+//  FocusSettings.swift
+//  FocusIsland
+//
+//  Created by UT Austin on 8/3/25.
+//
+
+
+//
+//  FocusSettings.swift
+//  FocusIsland
+//
+//  Created by UT Austin on 8/4/25.
+//
+
+import Foundation
+import Combine
+
+/// All tunable numbers live here and persist automatically.
+final class FocusSettings: ObservableObject, Codable {
+    // MARK: – Tunables (defaults match the spec)
+    @Published var focusMinutes: Int          = 20   // F
+    @Published var standardBreakMinutes: Int  = 10   // B
+    @Published var scalingFactor: Double      = 1.0/6.0 // S (1⁄6)
+
+    private enum CodingKeys: CodingKey {
+        case focusMinutes, standardBreakMinutes, scalingFactor
+    }
+
+    // MARK: – Persistence
+    private static let key = "FocusSettings.v1"
+
+    static func load() -> FocusSettings {
+        if let data = UserDefaults.standard.data(forKey: key),
+           let model = try? JSONDecoder().decode(FocusSettings.self, from: data) {
+            return model
+        }
+        return FocusSettings()
+    }
+
+    func save() {
+        if let data = try? JSONEncoder().encode(self) {
+            UserDefaults.standard.set(data, forKey: Self.key)
+        }
+    }
+
+    // Encode / decode so @Published vars persist.
+    init() {}
+    init(from decoder: Decoder) throws {
+        let c  = try decoder.container(keyedBy: CodingKeys.self)
+        focusMinutes          = try c.decode(Int.self,    forKey: .focusMinutes)
+        standardBreakMinutes  = try c.decode(Int.self,    forKey: .standardBreakMinutes)
+        scalingFactor         = try c.decode(Double.self, forKey: .scalingFactor)
+    }
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(focusMinutes,         forKey: .focusMinutes)
+        try c.encode(standardBreakMinutes, forKey: .standardBreakMinutes)
+        try c.encode(scalingFactor,        forKey: .scalingFactor)
+    }
+}
+
+
+================================================================================
+
+File: EditGoalsView.swift
+================================================================================
+//
+//  EditGoalsView.swift
+//  FocusIsland
+//
+//  Created by UT Austin on 8/4/25.
+//
+
+import SwiftUI
+
+/// Simple CRUD interface for Goals with explicit reorder buttons.
+/// Uses proper state mutation methods to ensure changes propagate.
+struct EditGoalsView: View {
+    @ObservedObject var state: FocusIslandState
+
+    @State private var editingID: UUID?
+    @State private var title = ""
+    @State private var minutes = ""
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            HStack {
+                Text("Edit Goals")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(.white)
+                Spacer()
+                Button("Done") {
+                    state.expandedViewMode = .normal
+                }
+                .buttonStyle(.borderedProminent)
+            }
+
+            ScrollView {
+                VStack(spacing: 14) {
+                    ForEach(state.goals) { goal in
+                        goalRow(goal)
+                    }
+
+                    if editingID == nil {
+                        addRow
+                    }
+                }
+            }
+            .frame(maxHeight: 340)
+            Spacer()
+        }
+        .padding(40)
+        .frame(minWidth: 540)
+        .background(
+            RoundedRectangle(cornerRadius: 32, style: .continuous)
+                .fill(Color(.sRGB, white: 0.12, opacity: 0.97))
+        )
+    }
+
+    @ViewBuilder
+    private func goalRow(_ goal: Goal) -> some View {
+        if editingID == goal.id {
+            HStack {
+                TextField("Edit Title", text: $title)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                TextField("Minutes", text: $minutes)
+                    .frame(width: 60)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                Button("Save") {
+                    saveGoal(goal.id)
+                }
+                .buttonStyle(.borderedProminent)
+                Button("Cancel") {
+                    cancelEdit()
+                }
+                .buttonStyle(.bordered)
+            }
+        } else {
+            HStack {
+                Text(goal.title)
+                    .foregroundColor(.white)
+                Spacer()
+                Text("\(goal.minutes) min")
+                    .foregroundColor(.orange)
+                Button {
+                    editingID = goal.id
+                    title = goal.title
+                    minutes = String(goal.minutes)
+                } label: {
+                    Image(systemName: "pencil")
+                }
+                .buttonStyle(.plain)
+                Button {
+                    state.removeGoal(id: goal.id)
+                } label: {
+                    Image(systemName: "trash")
+                        .foregroundColor(.red)
+                }
+                .buttonStyle(.plain)
+                Button {
+                    state.moveGoalUp(id: goal.id)
+                } label: {
+                    Image(systemName: "arrow.up")
+                }
+                .buttonStyle(.plain)
+                .disabled(state.isFirst(goal))
+                Button {
+                    state.moveGoalDown(id: goal.id)
+                } label: {
+                    Image(systemName: "arrow.down")
+                }
+                .buttonStyle(.plain)
+                .disabled(state.isLast(goal))
+            }
+            .padding(.vertical, 2)
+        }
+    }
+
+    private var addRow: some View {
+        HStack {
+            TextField("New goal title", text: $title)
+                .textFieldStyle(RoundedBorderTextFieldStyle())
+            TextField("Minutes", text: $minutes)
+                .frame(width: 60)
+                .textFieldStyle(RoundedBorderTextFieldStyle())
+            Button("Add") {
+                addGoal()
+            }
+            .buttonStyle(.borderedProminent)
+        }
+        .padding(.top, 8)
+    }
+
+    private func addGoal() {
+        guard let m = Int(minutes), m > 0,
+              !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        state.addGoal(title: title, minutes: m)
+        title = ""
+        minutes = ""
+    }
+
+    private func saveGoal(_ id: UUID) {
+        guard let m = Int(minutes), m > 0,
+              !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        state.updateGoal(id: id, title: title, minutes: m)
+        editingID = nil
+    }
+
+    private func cancelEdit() {
+        editingID = nil
+        title = ""
+        minutes = ""
+    }
+}
+
+
+================================================================================
+
+File: tmp2.txt
+================================================================================
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>New item</key>
+	<dict>
+		<key>CFBundleDevelopmentRegion</key>
+		<string>$(DEVELOPMENT_LANGUAGE)</string>
+		<key>CFBundleExecutable</key>
+		<string>$(EXECUTABLE_NAME)</string>
+		<key>CFBundleIdentifier</key>
+		<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+		<key>CFBundleInfoDictionaryVersion</key>
+		<string>6.0</string>
+		<key>CFBundleName</key>
+		<string>$(PRODUCT_NAME)</string>
+		<key>CFBundlePackageType</key>
+		<string>APPL</string>
+		<key>CFBundleShortVersionString</key>
+		<string>1.0</string>
+		<key>CFBundleVersion</key>
+		<string>1</string>
+		<key>LSMinimumSystemVersion</key>
+		<string>$(MACOSX_DEPLOYMENT_TARGET)</string>
+		<key>LSUIElement</key>
+		<true/>
+	</dict>
+</dict>
+</plist>
+
+
+================================================================================
+
+File: CalendarTooltip.swift
+================================================================================
+//
+//  CalendarTooltip.swift
+//  FocusIsland
+//
+//  Created by UT Austin on 8/6/25.
+//
+
+
+//
+//  CalendarTooltip.swift
+//  FocusIsland
+//
+//  Created by UT Austin on 8/6/25.
+//
+
+import SwiftUI
+
+struct CalendarTooltip: View {
+    let title: String
+    let timeSpan: String
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundColor(.white)
+                .lineLimit(2)
+            Text(timeSpan)
+                .font(.system(size: 11))
+                .foregroundColor(.white.opacity(0.8))
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .background(
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .fill(Color.black.opacity(0.85))
+                .shadow(color: .black.opacity(0.3), radius: 4, y: 2)
+        )
+    }
+}
+
+
+================================================================================
+
+File: Info.plist
+================================================================================
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>$(DEVELOPMENT_LANGUAGE)</string>
+    <key>CFBundleExecutable</key>
+    <string>$(EXECUTABLE_NAME)</string>
+    <key>CFBundleIdentifier</key>
+    <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>$(PRODUCT_NAME)</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>$(MACOSX_DEPLOYMENT_TARGET)</string>
+    <key>LSUIElement</key>
+    <true/>
+</dict>
+</plist>
+
 
 
 ================================================================================

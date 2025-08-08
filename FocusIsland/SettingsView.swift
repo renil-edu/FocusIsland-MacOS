@@ -16,6 +16,10 @@ struct SettingsView: View {
     @State private var localFocusMinutes: Int = 20
     @State private var localBreakMinutes: Int = 10
     @State private var localScalingFactor: String = "0.17"
+    
+    // String representations for direct editing
+    @State private var focusMinutesText: String = "20"
+    @State private var breakMinutesText: String = "10"
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
@@ -31,15 +35,21 @@ struct SettingsView: View {
                 .buttonStyle(.borderedProminent)
             }
 
-            settingRow(title: "Focus Session Length",
-                       value: $localFocusMinutes,
-                       range: 5...90,
-                       suffix: "min")
+            editableSettingRow(
+                title: "Focus Session Length",
+                value: $localFocusMinutes,
+                textValue: $focusMinutesText,
+                range: 5...90,
+                suffix: "min"
+            )
 
-            settingRow(title: "Standard Break Length",
-                       value: $localBreakMinutes,
-                       range: 5...60,
-                       suffix: "min")
+            editableSettingRow(
+                title: "Standard Break Length",
+                value: $localBreakMinutes,
+                textValue: $breakMinutesText,
+                range: 5...60,
+                suffix: "min"
+            )
 
             VStack(alignment: .leading, spacing: 8) {
                 Text("Post-Goal Break Scaling Factor")
@@ -86,10 +96,11 @@ struct SettingsView: View {
     }
 
     @ViewBuilder
-    private func settingRow(title: String,
-                            value: Binding<Int>,
-                            range: ClosedRange<Int>,
-                            suffix: String) -> some View {
+    private func editableSettingRow(title: String,
+                                   value: Binding<Int>,
+                                   textValue: Binding<String>,
+                                   range: ClosedRange<Int>,
+                                   suffix: String) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
                 .foregroundColor(.white)
@@ -99,19 +110,36 @@ struct SettingsView: View {
                 Button("-") {
                     if value.wrappedValue > range.lowerBound {
                         value.wrappedValue -= 1
+                        textValue.wrappedValue = String(value.wrappedValue)
                     }
                 }
                 .buttonStyle(.bordered)
                 .frame(width: 32, height: 28)
                 
-                Text("\(value.wrappedValue) \(suffix)")
-                    .foregroundColor(.orange)
-                    .font(.system(size: 16, weight: .medium))
-                    .frame(width: 80, alignment: .center)
+                HStack(spacing: 4) {
+                    TextField("Value", text: textValue)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(width: 50)
+                        .multilineTextAlignment(.center)
+                        .onSubmit {
+                            validateAndUpdateValue(textValue: textValue, value: value, range: range)
+                        }
+                        .onChange(of: textValue.wrappedValue) { _, newValue in
+                            // Allow real-time validation as user types
+                            if let intValue = Int(newValue), range.contains(intValue) {
+                                value.wrappedValue = intValue
+                            }
+                        }
+                    
+                    Text(suffix)
+                        .foregroundColor(.orange)
+                        .font(.system(size: 16, weight: .medium))
+                }
                 
                 Button("+") {
                     if value.wrappedValue < range.upperBound {
                         value.wrappedValue += 1
+                        textValue.wrappedValue = String(value.wrappedValue)
                     }
                 }
                 .buttonStyle(.bordered)
@@ -125,12 +153,31 @@ struct SettingsView: View {
         localFocusMinutes = settings.focusMinutes
         localBreakMinutes = settings.standardBreakMinutes
         localScalingFactor = String(format: "%.2f", settings.scalingFactor)
+        
+        // Update text representations
+        focusMinutesText = String(localFocusMinutes)
+        breakMinutesText = String(localBreakMinutes)
     }
     
     private func saveSettings() {
+        // Validate text fields one more time before saving
+        validateAndUpdateValue(textValue: $focusMinutesText, value: $localFocusMinutes, range: 5...90)
+        validateAndUpdateValue(textValue: $breakMinutesText, value: $localBreakMinutes, range: 5...60)
+        
         settings.focusMinutes = localFocusMinutes
         settings.standardBreakMinutes = localBreakMinutes
         settings.scalingFactor = Double(localScalingFactor) ?? 0.17
+    }
+    
+    private func validateAndUpdateValue(textValue: Binding<String>, value: Binding<Int>, range: ClosedRange<Int>) {
+        if let intValue = Int(textValue.wrappedValue) {
+            let clampedValue = max(range.lowerBound, min(range.upperBound, intValue))
+            value.wrappedValue = clampedValue
+            textValue.wrappedValue = String(clampedValue)
+        } else {
+            // If invalid input, revert to current value
+            textValue.wrappedValue = String(value.wrappedValue)
+        }
     }
     
     private func adjustScalingFactor(by amount: Double) {
