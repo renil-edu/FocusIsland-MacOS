@@ -4,6 +4,9 @@
 
 Built as a weekend project by a UT Austin CSB student who got tired of losing focus every 20 minutes and wanted something better than basic timers that just... tick.
 
+
+![Expanded](Screenshots/Expanded.gif)
+
 ## Why This Exists
 
 During my sophomore year at college, I kept bouncing between assignments and never felt like I was making real progress. Traditional productivity apps felt either too basic (just timers) or too complex (project management overkill). I wanted something that would:
@@ -23,6 +26,14 @@ The result is a Dynamic Island-style focus timer that turns the Pomodoro Techniq
 - **🔄 Automatic Session Flow** - Seamlessly transitions between focus blocks and breaks
 - **⚙️ Customizable Settings** - Adjust focus durations, break lengths, and scaling factors
 - **📊 Menu Bar Controls** - Quick access without disrupting your workflow
+
+## Screenshots
+
+### Compact View
+![Compact](Screenshots/Compact.gif)
+
+### Expanded View
+![Timeline](Screenshots/Settings.gif)
 
 ## Technical Implementation
 
@@ -111,7 +122,7 @@ This project is licensed under a custom non-commercial license - see the [LICENS
 
 ---
 
-**Developed by: Renil Gupta, August 2025**
+**Designed by: Renil Gupta, August 2025**
 
 Current Version: v1.0.0
 
