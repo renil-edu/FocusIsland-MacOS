@@ -6,6 +6,7 @@
 *.xcuserstate
 project.xcworkspace/
 xcuserdata/
+xcshareddata/
 
 # Build generated
 build/
