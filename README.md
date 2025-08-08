@@ -4,8 +4,6 @@
 
 Built as a weekend project by a UT Austin CSB student who got tired of losing focus every 20 minutes and wanted something better than basic timers that just... tick.
 
-![FocusIsland Demo](screenshots/demo.gif)
-
 ## Why This Exists
 
 During my sophomore year at college, I kept bouncing between assignments and never felt like I was making real progress. Traditional productivity apps felt either too basic (just timers) or too complex (project management overkill). I wanted something that would:
@@ -25,12 +23,6 @@ The result is a Dynamic Island-style focus timer that turns the Pomodoro Techniq
 - **🔄 Automatic Session Flow** - Seamlessly transitions between focus blocks and breaks
 - **⚙️ Customizable Settings** - Adjust focus durations, break lengths, and scaling factors
 - **📊 Menu Bar Controls** - Quick access without disrupting your workflow
-
-## Screenshots
-
-| Compact View | Expanded Interface | Timeline Planning |
-|--------------|-------------------|-------------------|
-| ![Compact](screenshots/compact.png) | ![Expanded](screenshots/expanded.png) | ![Timeline](screenshots/timeline.png) |
 
 ## Technical Implementation
 
@@ -108,7 +100,7 @@ Found a bug? Have ideas for better productivity features? Contributions welcome!
 
 ## 📝 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under a custom non-commercial license - see the [LICENSE](https://github.com/renil-edu/FocusIsland-MacOS/blob/main/LICENSE.md) file for details.
 
 ## 🙏 Acknowledgments
 
@@ -119,6 +111,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Developed by Renil Gupta, August 2025**
+**Developed by: Renil Gupta, August 2025**
+
+Current Version: v1.0.0
 
 *If FocusIsland helps you stay focused, consider starring the repo!*
