@@ -24,9 +24,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     lazy var state: FocusIslandState = {
         let focusState = FocusIslandState(
             goals: [
-                Goal(title: "Homework 1",     minutes: 60),
-                Goal(title: "Coding Project", minutes: 30),
-                Goal(title: "Resume Fixing",  minutes: 20)
+                Goal(title: "Edit this Goal",     minutes: 30)
             ],
             settings: settings
         )

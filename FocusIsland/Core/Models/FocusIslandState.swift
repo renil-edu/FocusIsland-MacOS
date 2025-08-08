@@ -97,7 +97,9 @@ final class FocusIslandState: ObservableObject {
     func removeGoal(id: UUID) {
         print("🔍 DEBUG: Removing goal with id: \(id)")
         goals.removeAll { $0.id == id }
-        // Goals array change will trigger regeneration via $goals publisher
+        
+        // FORCE immediate session regeneration instead of relying on async publisher
+        regenerateSessions()
     }
 
     func updateGoal(id: UUID, title: String, minutes: Int) {

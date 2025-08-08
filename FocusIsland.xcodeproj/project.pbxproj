@@ -49,11 +49,6 @@
 			path = FocusIslandUITests;
 			sourceTree = "<group>";
 		};
-		D9FF1F3A2E3ED6E6006E343A /* Misc */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = Misc;
-			sourceTree = "<group>";
-		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -85,7 +80,6 @@
 		D9FF1F002E3EC1CA006E343A = {
 			isa = PBXGroup;
 			children = (
-				D9FF1F3A2E3ED6E6006E343A /* Misc */,
 				D9FF1F0B2E3EC1CA006E343A /* FocusIsland */,
 				D9FF1F1A2E3EC1CB006E343A /* FocusIslandTests */,
 				D9FF1F242E3EC1CB006E343A /* FocusIslandUITests */,
@@ -120,7 +114,6 @@
 			);
 			fileSystemSynchronizedGroups = (
 				D9FF1F0B2E3EC1CA006E343A /* FocusIsland */,
-				D9FF1F3A2E3ED6E6006E343A /* Misc */,
 			);
 			name = FocusIsland;
 			packageProductDependencies = (
