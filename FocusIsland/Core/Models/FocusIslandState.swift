@@ -88,17 +88,19 @@ final class FocusIslandState: ObservableObject {
     }
 
     // MARK: — Mutations (FIXED PROPAGATION)
-    func addGoal(title: String, minutes: Int) {
-        print("🔍 DEBUG: Adding goal: \(title), \(minutes) minutes")
-        goals.append(Goal(title: title, minutes: minutes))
-        // Goals array change will trigger regeneration via $goals publisher
-    }
-
     func removeGoal(id: UUID) {
         print("🔍 DEBUG: Removing goal with id: \(id)")
         goals.removeAll { $0.id == id }
         
         // FORCE immediate session regeneration instead of relying on async publisher
+        regenerateSessions()
+    }
+
+    func addGoal(title: String, minutes: Int) {
+        print("🔍 DEBUG: Adding goal: \(title), \(minutes) minutes")
+        goals.append(Goal(title: title, minutes: minutes))
+        
+        // FIXED: Force immediate regeneration instead of waiting for publisher
         regenerateSessions()
     }
 
@@ -109,36 +111,31 @@ final class FocusIslandState: ObservableObject {
             return
         }
         
-        let oldGoal = goals[idx]
-        print("🔍 DEBUG: Old goal: \(oldGoal.title), \(oldGoal.minutes) minutes")
-        
-        goals[idx].title   = title
+        goals[idx].title = title
         goals[idx].minutes = minutes
         
-        print("🔍 DEBUG: Updated goal: \(goals[idx].title), \(goals[idx].minutes) minutes")
-        
-        // FIXED: Force immediate regeneration and timer update
+        // FIXED: Force immediate regeneration
         regenerateSessions()
-        
-        // FIXED: Force UI update to ensure changes are visible
-        DispatchQueue.main.async { [weak self] in
-            self?.objectWillChange.send()
-        }
     }
 
     func moveGoalUp(id: UUID) {
         guard let idx = goals.firstIndex(where: { $0.id == id }), idx > 0 else { return }
         goals.move(fromOffsets: IndexSet(integer: idx), toOffset: idx - 1)
-        currentSessionIndex = 0 // Reset session index to zero after reorder
+        currentSessionIndex = 0
+        
+        // FIXED: Force immediate regeneration
         regenerateSessions()
     }
 
     func moveGoalDown(id: UUID) {
         guard let idx = goals.firstIndex(where: { $0.id == id }), idx < goals.count - 1 else { return }
         goals.move(fromOffsets: IndexSet(integer: idx), toOffset: idx + 2)
-        currentSessionIndex = 0 // Reset session index
+        currentSessionIndex = 0
+        
+        // FIXED: Force immediate regeneration
         regenerateSessions()
     }
+
 
     func isFirst(_ goal: Goal) -> Bool {
         goals.first?.id == goal.id
